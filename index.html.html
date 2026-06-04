@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>食材效期預警看板</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang TC','Microsoft JhengHei',sans-serif;background:#f4f3ef;color:#1a1a18;min-height:100vh;padding:24px}
+
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+header h1{font-size:36px;font-weight:500;display:flex;align-items:center;gap:12px}
+header .sub{font-size:22px;color:#888780}
+
+.date-bar{background:#fff;border-radius:12px;border:0.5px solid rgba(0,0,0,0.09);padding:20px 28px;margin-bottom:18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.date-bar label{font-size:26px;color:#888780;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.date-bar input[type=date]{font-size:26px;padding:8px 14px;height:52px;border-radius:10px;border:0.5px solid rgba(0,0,0,0.15);background:#f4f3ef;color:#1a1a18;cursor:pointer;outline:none}
+.date-bar input[type=date]:focus{border-color:#378ADD;background:#fff}
+.date-bar button{font-size:26px;padding:8px 24px;height:52px;border-radius:10px;border:none;background:#1a1a18;color:#fff;cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:500}
+.date-bar button:hover{background:#333}
+.date-info{font-size:22px;color:#888780;margin-left:auto}
+
+.add-form{background:#fff;border-radius:12px;border:0.5px solid rgba(0,0,0,0.09);padding:20px 28px;margin-bottom:18px}
+.form-title{font-size:26px;font-weight:500;display:flex;align-items:center;gap:8px;margin-bottom:16px;color:#1a1a18}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field label{font-size:22px;color:#888780}
+.form-field input{font-size:26px;padding:8px 12px;height:52px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.15);background:#f4f3ef;color:#1a1a18;outline:none}
+.form-field input:focus{border-color:#378ADD;background:#fff}
+.form-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn-add{font-size:26px;padding:8px 24px;height:52px;border-radius:10px;border:none;background:#1D9E75;color:#fff;cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:500}
+.btn-add:hover{background:#0F6E56}
+.btn-reset{font-size:26px;padding:8px 18px;height:52px;border-radius:10px;border:0.5px solid rgba(0,0,0,0.15);background:#f4f3ef;color:#444;cursor:pointer}
+.form-msg{font-size:22px;padding:6px 14px;border-radius:8px;display:none}
+.form-msg.ok{background:#EAF3DE;color:#27500A;display:block}
+.form-msg.err{background:#FCEBEB;color:#791F1F;display:block}
+
+.top-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
+.metric{background:#fff;border-radius:10px;border:0.5px solid rgba(0,0,0,0.09);padding:16px 18px;cursor:pointer;transition:box-shadow .15s}
+.metric:hover{box-shadow:0 0 0 2px rgba(0,0,0,0.12)}
+.metric.active-card{box-shadow:0 0 0 2px #1a1a18}
+.metric-label{font-size:22px;color:#888780;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.metric-val{font-size:44px;font-weight:500;line-height:1.1}
+.m-scrapped .metric-val{color:#4A1B0C}
+.m-expired .metric-val{color:#A32D2D}
+.m-urgent .metric-val{color:#854F0B}
+.m-warn .metric-val{color:#185FA5}
+.m-ok .metric-val{color:#3B6D11}
+
+.priority-box{background:#fff;border-radius:12px;border:0.5px solid rgba(0,0,0,0.09);padding:20px 28px;margin-bottom:18px}
+.priority-title{font-size:26px;font-weight:500;color:#1a1a18;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.priority-empty{font-size:24px;color:#888780;padding:10px 0}
+.priority-list{display:flex;flex-direction:column;gap:10px}
+.priority-item{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:10px;font-size:26px;flex-wrap:wrap}
+.pi-scrapped{background:#F5C4B3;border-left:5px solid #D85A30}
+.pi-expired{background:#FCEBEB;border-left:5px solid #E24B4A}
+.pi-urgent{background:#FAEEDA;border-left:5px solid #EF9F27}
+.pi-week{background:#E6F1FB;border-left:5px solid #378ADD}
+.pi-name{font-weight:500;min-width:80px}
+.pi-batch{color:#888780;font-size:22px;flex:1;min-width:100px}
+.pi-exp{font-size:22px;min-width:130px}
+.pi-days{font-size:24px;font-weight:500;min-width:110px;text-align:right}
+.pi-qty{font-size:22px;color:#888780;min-width:80px;text-align:right}
+.pi-tag{font-size:20px;padding:4px 14px;border-radius:14px;font-weight:500;white-space:nowrap}
+.tag-scrapped{background:#D85A30;color:#fff}
+.tag-expired{background:#E24B4A;color:#fff}
+.tag-urgent{background:#EF9F27;color:#fff}
+.tag-week{background:#378ADD;color:#fff}
+
+.section{background:#fff;border-radius:12px;border:0.5px solid rgba(0,0,0,0.09);padding:20px 28px;margin-bottom:18px}
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.sec-title{font-size:26px;font-weight:500;color:#1a1a18;display:flex;align-items:center;gap:8px}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap}
+.filter-btn{font-size:22px;padding:5px 16px;border-radius:24px;border:0.5px solid rgba(0,0,0,0.13);background:#f4f3ef;color:#444;cursor:pointer}
+.filter-btn.active{background:#1a1a18;color:#fff;border-color:#1a1a18}
+
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:26px}
+th{text-align:left;padding:10px 14px;color:#888780;font-weight:500;border-bottom:0.5px solid rgba(0,0,0,0.09);white-space:nowrap}
+td{padding:10px 14px;border-bottom:0.5px solid rgba(0,0,0,0.05);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf7}
+.days-bar-wrap{display:flex;align-items:center;gap:10px}
+.days-bar{height:7px;border-radius:4px;min-width:3px}
+.badge{font-size:20px;padding:3px 12px;border-radius:14px;font-weight:500;white-space:nowrap}
+.badge-scrapped{background:#F5C4B3;color:#4A1B0C}
+.badge-expired{background:#FCEBEB;color:#791F1F}
+.badge-urgent{background:#FAEEDA;color:#633806}
+.badge-week{background:#E6F1FB;color:#0C447C}
+.badge-safe{background:#EAF3DE;color:#27500A}
+
+.show-all-btn{display:block;width:100%;padding:12px;font-size:22px;color:#888780;background:none;border:none;cursor:pointer;text-align:center;margin-top:8px}
+.show-all-btn:hover{color:#1a1a18}
+.del-btn{font-size:20px;padding:4px 12px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.13);background:#f4f3ef;color:#888780;cursor:pointer}
+.del-btn:hover{background:#FCEBEB;color:#791F1F;border-color:#F09595}
+
+@media(max-width:700px){body{padding:14px}.date-bar,.add-form{flex-direction:column;align-items:flex-start}.date-info{margin-left:0}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><i class="ti ti-alert-triangle" style="font-size:36px;color:#EF9F27"></i>食材效期預警看板</h1>
+  <span class="sub" id="dataCount">資料來源：111.csv｜共 130 筆</span>
+</header>
+
+<div class="date-bar">
+  <label><i class="ti ti-calendar" style="font-size:26px"></i>今天日期</label>
+  <input type="date" id="todayInput">
+  <button onclick="calculate()"><i class="ti ti-calculator" style="font-size:26px"></i>計算效期</button>
+  <span class="date-info" id="dateInfo"></span>
+</div>
+
+<div class="add-form">
+  <div class="form-title"><i class="ti ti-plus" style="font-size:26px;color:#1D9E75"></i>新增食材</div>
+  <div class="form-grid">
+    <div class="form-field"><label>食材名稱 *</label><input type="text" id="inp-name" placeholder="例：豆腐"></div>
+    <div class="form-field"><label>批號</label><input type="text" id="inp-batch" placeholder="例：BATCH001"></div>
+    <div class="form-field"><label>到期日 *</label><input type="date" id="inp-exp"></div>
+    <div class="form-field"><label>庫存量</label><input type="number" id="inp-qty" placeholder="例：100" min="0"></div>
+    <div class="form-field"><label>進貨日</label><input type="date" id="inp-in"></div>
+  </div>
+  <div class="form-actions">
+    <button class="btn-add" onclick="addItem()"><i class="ti ti-plus" style="font-size:26px"></i>加入庫存</button>
+    <button class="btn-reset" onclick="resetForm()">清除</button>
+    <span class="form-msg" id="formMsg"></span>
+  </div>
+</div>
+
+<div class="top-cards" id="topCards"></div>
+
+<div class="priority-box">
+  <div class="priority-title">
+    <i class="ti ti-flame" style="font-size:26px;color:#E24B4A"></i>
+    需要處理的品項
+    <span id="priorityCount" style="font-size:22px;color:#888780;font-weight:400"></span>
+  </div>
+  <div id="priorityList"><div class="priority-empty">請先選擇今天日期並按「計算效期」</div></div>
+</div>
+
+<div class="section">
+  <div class="sec-header">
+    <div class="sec-title"><i class="ti ti-list" style="font-size:26px;color:#888780"></i>全部庫存明細</div>
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="setFilter('all',this)">全部</button>
+      <button class="filter-btn" onclick="setFilter('scrapped',this)" style="border-color:#D85A30;color:#993C1D">應報廢</button>
+      <button class="filter-btn" onclick="setFilter('expired',this)">已過期</button>
+      <button class="filter-btn" onclick="setFilter('urgent',this)">緊急 ≤3天</button>
+      <button class="filter-btn" onclick="setFilter('week',this)">本週內</button>
+      <button class="filter-btn" onclick="setFilter('safe',this)">安全</button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>食材</th><th>批號</th><th>進貨日</th><th>到期日</th><th>剩餘天數</th><th>庫存量</th><th>狀態</th><th></th>
+      </tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+  <button class="show-all-btn" id="showAllBtn" onclick="toggleAll()" style="display:none"></button>
+</div>
+
+<script>
+const SEED=[{"name":"豆腐","batch":"BATCH1000","inDate":"2026-01-01","expDate":"2026-01-31","qty":372},{"name":"豆腐","batch":"b-1001","inDate":"2026-02-02","expDate":"2026-03-04","qty":357},{"name":"豆腐","batch":"BATCH1002","inDate":"2026-04-03","expDate":"2026-05-03","qty":487},{"name":"牛奶","batch":"BATCH1003","inDate":"2026-04-04","expDate":"2026-04-11","qty":126},{"name":"菇類","batch":"b-1004","inDate":"2026-05-05","expDate":"2026-05-12","qty":312},{"name":"起司","batch":"b-1005","inDate":"2026-06-06","expDate":"2026-12-03","qty":140},{"name":"菇類","batch":"b-1006","inDate":"2026-07-07","expDate":"2026-07-14","qty":55},{"name":"蝦仁","batch":"b-1007","inDate":"2026-08-08","expDate":"2027-02-04","qty":255},{"name":"鮭魚","batch":"BATCH1008","inDate":"2026-09-09","expDate":"2026-10-29","qty":234},{"name":"豬絞肉","batch":"BATCH1009","inDate":"2026-10-10","expDate":"2026-10-17","qty":106},{"name":"醬油","batch":"B1010","inDate":"2026-11-11","expDate":"2027-05-10","qty":186},{"name":"雞胸肉","batch":"b-1011","inDate":"2026-01-12","expDate":"2026-07-11","qty":26},{"name":"麵粉","batch":"b-1012","inDate":"2026-01-13","expDate":"2026-07-12","qty":368},{"name":"豬絞肉","batch":"BATCH1013","inDate":"2026-02-14","expDate":"2026-02-21","qty":63},{"name":"鮭魚","batch":"BATCH1014","inDate":"2026-03-15","expDate":"2026-05-04","qty":450},{"name":"砂糖","batch":"BATCH1015","inDate":"2026-05-16","expDate":"2026-11-12","qty":139},{"name":"蝦仁","batch":"BATCH1016","inDate":"2026-05-17","expDate":"2026-11-13","qty":180},{"name":"奶油","batch":"b-1017","inDate":"2026-01-18","expDate":"2026-07-17","qty":447},{"name":"起司","batch":"BATCH1018","inDate":"2026-02-19","expDate":"2026-08-18","qty":374},{"name":"蝦仁","batch":"B1019","inDate":"2026-08-20","expDate":"2027-02-16","qty":197},{"name":"紅蘿蔔","batch":"b-1020","inDate":"2026-09-21","expDate":"2026-10-01","qty":223},{"name":"雞蛋","batch":"BATCH1021","inDate":"2026-10-22","expDate":"2026-10-29","qty":137},{"name":"蝦仁","batch":"b-1022","inDate":"2026-11-23","expDate":"2027-05-22","qty":270},{"name":"紅蘿蔔","batch":"BATCH1023","inDate":"2026-01-24","expDate":"2026-02-03","qty":453},{"name":"洋蔥","batch":"BATCH1024","inDate":"2026-01-25","expDate":"2026-02-01","qty":34},{"name":"起司","batch":"B1025","inDate":"2026-03-26","expDate":"2026-09-22","qty":108},{"name":"雞蛋","batch":"BATCH1026","inDate":"2026-03-27","expDate":"2026-04-03","qty":393},{"name":"白米","batch":"BATCH1027","inDate":"2026-05-28","expDate":"2026-11-24","qty":491},{"name":"蝦仁","batch":"B1028","inDate":"2026-05-01","expDate":"2026-10-28","qty":261},{"name":"食用油","batch":"BATCH1029","inDate":"2026-01-02","expDate":"2026-07-01","qty":20},{"name":"鮭魚","batch":"BATCH1031","inDate":"2026-08-04","expDate":"2026-09-23","qty":201},{"name":"醬油","batch":"B1032","inDate":"2026-09-05","expDate":"2027-03-04","qty":135},{"name":"牛奶","batch":"BATCH1033","inDate":"2026-10-06","expDate":"2026-10-13","qty":268},{"name":"麵粉","batch":"B1034","inDate":"2026-11-07","expDate":"2027-05-06","qty":343},{"name":"蝦仁","batch":"b-1035","inDate":"2026-12-08","expDate":"2027-06-06","qty":419},{"name":"牛奶","batch":"b-1036","inDate":"2026-01-09","expDate":"2026-01-16","qty":54},{"name":"菇類","batch":"B1037","inDate":"2026-02-10","expDate":"2026-02-17","qty":328},{"name":"馬鈴薯","batch":"B1038","inDate":"2026-03-11","expDate":"2026-04-30","qty":119},{"name":"蝦仁","batch":"B1039","inDate":"2026-05-12","expDate":"2026-11-08","qty":127},{"name":"雞胸肉","batch":"b-1040","inDate":"2026-05-13","expDate":"2026-11-09","qty":191},{"name":"雞蛋","batch":"b-1041","inDate":"2026-06-14","expDate":"2026-06-21","qty":426},{"name":"豬絞肉","batch":"b-1042","inDate":"2026-02-15","expDate":"2026-02-22","qty":479},{"name":"洋蔥","batch":"b-1043","inDate":"2026-08-16","expDate":"2026-08-23","qty":148},{"name":"白米","batch":"BATCH1044","inDate":"2026-04-17","expDate":"2026-10-14","qty":473},{"name":"奶油","batch":"B1045","inDate":"2026-05-18","expDate":"2026-11-14","qty":154},{"name":"菇類","batch":"BATCH1046","inDate":"2026-11-19","expDate":"2026-11-26","qty":204},{"name":"豆腐","batch":"BATCH1047","inDate":"2026-12-20","expDate":"2027-01-19","qty":203},{"name":"豬絞肉","batch":"b-1048","inDate":"2026-01-21","expDate":"2026-01-28","qty":86},{"name":"洋蔥","batch":"B1049","inDate":"2026-02-22","expDate":"2026-03-01","qty":65},{"name":"牛奶","batch":"B1050","inDate":"2026-03-23","expDate":"2026-03-30","qty":492},{"name":"番茄","batch":"B1051","inDate":"2026-04-24","expDate":"2026-05-01","qty":220},{"name":"牛奶","batch":"b-1052","inDate":"2026-05-25","expDate":"2026-06-01","qty":289},{"name":"起司","batch":"BATCH1053","inDate":"2026-06-26","expDate":"2026-12-23","qty":356},{"name":"洋蔥","batch":"b-1054","inDate":"2026-02-27","expDate":"2026-03-06","qty":270},{"name":"番茄","batch":"BATCH1055","inDate":"2026-03-28","expDate":"2026-04-04","qty":109},{"name":"洋蔥","batch":"BATCH1056","inDate":"2026-04-01","expDate":"2026-04-08","qty":280},{"name":"豆腐","batch":"B1057","inDate":"2026-10-02","expDate":"2026-11-01","qty":21},{"name":"蝦仁","batch":"B1058","inDate":"2026-11-03","expDate":"2027-05-02","qty":152},{"name":"豆腐","batch":"b-1059","inDate":"2026-12-04","expDate":"2027-01-03","qty":238},{"name":"紅蘿蔔","batch":"b-1060","inDate":"2026-01-05","expDate":"2026-01-15","qty":285},{"name":"豆腐","batch":"B1061","inDate":"2026-02-06","expDate":"2026-03-08","qty":128},{"name":"起司","batch":"B1062","inDate":"2026-03-07","expDate":"2026-09-03","qty":126},{"name":"紅蘿蔔","batch":"BATCH1063","inDate":"2026-04-08","expDate":"2026-04-18","qty":9},{"name":"紅蘿蔔","batch":"B1064","inDate":"2026-05-09","expDate":"2026-05-19","qty":111},{"name":"豬絞肉","batch":"b-1065","inDate":"2026-06-10","expDate":"2026-06-17","qty":349},{"name":"砂糖","batch":"BATCH1066","inDate":"2026-07-11","expDate":"2027-01-07","qty":197},{"name":"豬絞肉","batch":"b-1067","inDate":"2026-08-12","expDate":"2026-08-19","qty":227},{"name":"麵粉","batch":"BATCH1068","inDate":"2026-09-13","expDate":"2027-03-12","qty":55},{"name":"菇類","batch":"B1069","inDate":"2026-10-14","expDate":"2026-10-21","qty":199},{"name":"雞蛋","batch":"BATCH1070","inDate":"2026-11-15","expDate":"2026-11-22","qty":371},{"name":"食用油","batch":"B1071","inDate":"2026-12-16","expDate":"2027-06-14","qty":72},{"name":"高麗菜","batch":"B1072","inDate":"2026-01-17","expDate":"2026-01-27","qty":50},{"name":"高麗菜","batch":"BATCH1073","inDate":"2026-02-18","expDate":"2026-02-28","qty":353},{"name":"蝦仁","batch":"B1074","inDate":"2026-04-19","expDate":"2026-10-16","qty":73},{"name":"奶油","batch":"B1075","inDate":"2026-04-20","expDate":"2026-10-17","qty":224},{"name":"番茄","batch":"b-1076","inDate":"2026-05-21","expDate":"2026-05-28","qty":16},{"name":"高麗菜","batch":"BATCH1077","inDate":"2026-06-22","expDate":"2026-07-02","qty":124},{"name":"起司","batch":"B1078","inDate":"2026-07-23","expDate":"2027-01-19","qty":275},{"name":"番茄","batch":"BATCH1079","inDate":"2026-08-24","expDate":"2026-08-31","qty":10},{"name":"醬油","batch":"B1080","inDate":"2026-09-25","expDate":"2027-03-24","qty":82},{"name":"白米","batch":"BATCH1081","inDate":"2026-10-26","expDate":"2027-04-24","qty":445},{"name":"番茄","batch":"B1082","inDate":"2026-11-27","expDate":"2026-12-04","qty":126},{"name":"起司","batch":"","inDate":"2026-01-28","expDate":"2026-07-27","qty":257},{"name":"洋蔥","batch":"B1084","inDate":"2026-01-01","expDate":"2026-01-08","qty":176},{"name":"雞胸肉","batch":"B1085","inDate":"2026-02-02","expDate":"2026-08-01","qty":348},{"name":"洋蔥","batch":"BATCH1086","inDate":"2026-03-03","expDate":"2026-03-10","qty":357},{"name":"豆腐","batch":"BATCH1087","inDate":"2026-04-04","expDate":"2026-05-04","qty":333},{"name":"鮭魚","batch":"b-1088","inDate":"2026-05-05","expDate":"2026-06-24","qty":12},{"name":"紅蘿蔔","batch":"B1089","inDate":"2026-06-06","expDate":"2026-06-16","qty":76},{"name":"豬絞肉","batch":"b-1090","inDate":"2026-07-07","expDate":"2026-07-14","qty":396},{"name":"菇類","batch":"b-1091","inDate":"2026-03-08","expDate":"2026-03-15","qty":334},{"name":"雞蛋","batch":"B1092","inDate":"2026-09-09","expDate":"2026-09-16","qty":461},{"name":"雞蛋","batch":"b-1093","inDate":"2026-10-10","expDate":"2026-10-17","qty":199},{"name":"菇類","batch":"BATCH1094","inDate":"2026-11-11","expDate":"2026-11-18","qty":150},{"name":"馬鈴薯","batch":"BATCH1095","inDate":"2026-12-12","expDate":"2027-01-31","qty":408},{"name":"起司","batch":"BATCH1096","inDate":"2026-01-13","expDate":"2026-07-12","qty":239},{"name":"牛奶","batch":"BATCH1097","inDate":"2026-02-14","expDate":"2026-02-21","qty":290},{"name":"麵粉","batch":"b-1098","inDate":"2026-03-15","expDate":"2026-09-11","qty":250},{"name":"紅蘿蔔","batch":"b-1099","inDate":"2026-04-16","expDate":"2026-04-26","qty":388},{"name":"雞蛋","batch":"BATCH1100","inDate":"2026-05-17","expDate":"2026-05-24","qty":269},{"name":"鮭魚","batch":"BATCH1101","inDate":"2026-06-18","expDate":"2026-08-07","qty":143},{"name":"紅蘿蔔","batch":"BATCH1102","inDate":"2026-07-19","expDate":"2026-07-29","qty":43},{"name":"醬油","batch":"b-1103","inDate":"2026-08-20","expDate":"2027-02-16","qty":181},{"name":"高麗菜","batch":"b-1104","inDate":"2026-04-21","expDate":"2026-05-01","qty":368},{"name":"紅蘿蔔","batch":"BATCH1105","inDate":"2026-10-22","expDate":"2026-11-01","qty":55},{"name":"食用油","batch":"b-1106","inDate":"2026-11-23","expDate":"2027-05-22","qty":112},{"name":"砂糖","batch":"BATCH1107","inDate":"2026-12-24","expDate":"2027-06-22","qty":279},{"name":"砂糖","batch":"b-1108","inDate":"2026-02-25","expDate":"2026-08-24","qty":223},{"name":"砂糖","batch":"B1109","inDate":"2026-02-26","expDate":"2026-08-25","qty":148},{"name":"蝦仁","batch":"B1110","inDate":"2026-03-27","expDate":"2026-09-23","qty":257},{"name":"醬油","batch":"BATCH1111","inDate":"2026-05-28","expDate":"2026-11-24","qty":441},{"name":"番茄","batch":"b-1112","inDate":"2026-06-01","expDate":"2026-06-08","qty":229},{"name":"食用油","batch":"b-1113","inDate":"2026-06-02","expDate":"2026-11-29","qty":276},{"name":"洋蔥","batch":"BATCH1114","inDate":"2026-07-03","expDate":"2026-07-10","qty":262},{"name":"砂糖","batch":"b-1115","inDate":"2026-03-04","expDate":"2026-08-31","qty":252},{"name":"鮭魚","batch":"","inDate":"2026-09-05","expDate":"2026-10-25","qty":268},{"name":"麵粉","batch":"B1117","inDate":"2026-05-06","expDate":"2026-11-02","qty":358},{"name":"菇類","batch":"BATCH1118","inDate":"2026-11-07","expDate":"2026-11-14","qty":1},{"name":"麵粉","batch":"B1119","inDate":"2026-01-08","expDate":"2026-07-07","qty":451},{"name":"番茄","batch":"BATCH1120","inDate":"2026-01-09","expDate":"2026-01-16","qty":13},{"name":"紅蘿蔔","batch":"BATCH1121","inDate":"2026-03-10","expDate":"2026-03-20","qty":212},{"name":"蝦仁","batch":"BATCH1122","inDate":"2026-03-11","expDate":"2026-09-07","qty":18},{"name":"奶油","batch":"BATCH1123","inDate":"2026-05-12","expDate":"2026-11-08","qty":219},{"name":"麵粉","batch":"BATCH1124","inDate":"2026-05-13","expDate":"2026-11-09","qty":330},{"name":"紅蘿蔔","batch":"BATCH1125","inDate":"2026-06-14","expDate":"2026-06-24","qty":44},{"name":"鮭魚","batch":"B1126","inDate":"2026-07-15","expDate":"2026-09-03","qty":84},{"name":"馬鈴薯","batch":"B1127","inDate":"2026-08-16","expDate":"2026-10-05","qty":94},{"name":"麵粉","batch":"B1128","inDate":"2026-09-17","expDate":"2027-03-16","qty":366},{"name":"白米","batch":"b-1129","inDate":"2026-10-18","expDate":"2027-04-16","qty":380},{"name":"蝦仁","batch":"B1019b","inDate":"2026-08-20","expDate":"2027-02-16","qty":197}];
+
+function loadData(){try{const s=localStorage.getItem('food_v4');return s?JSON.parse(s):[...SEED];}catch(e){return[...SEED];}}
+function saveData(){try{localStorage.setItem('food_v4',JSON.stringify(inventory));}catch(e){}}
+
+let inventory=loadData(), computed=[], currentFilter='all', showingAll=false;
+
+function daysBetween(today,exp){
+  const t=new Date(today);t.setHours(0,0,0,0);
+  const e=new Date(exp);e.setHours(0,0,0,0);
+  return Math.round((e-t)/86400000);
+}
+function classify(d){if(d<-7)return'scrapped';if(d<0)return'expired';if(d<=3)return'urgent';if(d<=7)return'week';return'safe';}
+
+function calculate(){
+  const val=document.getElementById('todayInput').value;
+  if(!val){alert('請先選擇今天日期');return;}
+  const todayDate=new Date(val);
+  const weekEnd=new Date(todayDate);weekEnd.setDate(weekEnd.getDate()+7);
+  const weekDay=['日','一','二','三','四','五','六'][todayDate.getDay()];
+
+  computed=inventory.map((d,i)=>{const days=daysBetween(val,d.expDate);return{...d,days,type:classify(days),idx:i};}).sort((a,b)=>a.days-b.days);
+
+  const cnt={scrapped:0,expired:0,urgent:0,week:0,safe:0};
+  computed.forEach(x=>cnt[x.type]++);
+
+  document.getElementById('dateInfo').textContent=`${val}（週${weekDay}）`;
+  document.getElementById('dataCount').textContent=`共 ${inventory.length} 筆`;
+
+  document.getElementById('topCards').innerHTML=`
+    <div class="metric m-scrapped" onclick="setFilterCard('scrapped')"><div class="metric-label"><i class="ti ti-trash" style="font-size:22px"></i>應報廢</div><div class="metric-val">${cnt.scrapped}</div></div>
+    <div class="metric m-expired"  onclick="setFilterCard('expired')"><div class="metric-label"><i class="ti ti-x" style="font-size:22px"></i>已過期</div><div class="metric-val">${cnt.expired}</div></div>
+    <div class="metric m-urgent"   onclick="setFilterCard('urgent')"><div class="metric-label"><i class="ti ti-flame" style="font-size:22px"></i>緊急 ≤3天</div><div class="metric-val">${cnt.urgent}</div></div>
+    <div class="metric m-warn"     onclick="setFilterCard('week')"><div class="metric-label"><i class="ti ti-alert-triangle" style="font-size:22px"></i>本週內</div><div class="metric-val">${cnt.week}</div></div>
+    <div class="metric m-ok"       onclick="setFilterCard('safe')"><div class="metric-label"><i class="ti ti-check" style="font-size:22px"></i>安全</div><div class="metric-val">${cnt.safe}</div></div>
+  `;
+
+  const priority=computed.filter(x=>x.type!=='safe');
+  document.getElementById('priorityCount').textContent=priority.length?`共 ${priority.length} 項`:'';
+
+  if(!priority.length){
+    document.getElementById('priorityList').innerHTML='<div class="priority-empty" style="color:#3B6D11"><i class="ti ti-circle-check"></i> 本週所有食材都在安全期內！</div>';
+  } else {
+    document.getElementById('priorityList').innerHTML='<div class="priority-list">'+priority.map(x=>{
+      const tc={scrapped:'pi-scrapped',expired:'pi-expired',urgent:'pi-urgent',week:'pi-week'}[x.type];
+      const tg={scrapped:'tag-scrapped',expired:'tag-expired',urgent:'tag-urgent',week:'tag-week'}[x.type];
+      const tt={scrapped:'應報廢',expired:'已過期',urgent:'緊急',week:'本週'}[x.type];
+      const dt=x.days<0?`過期 ${Math.abs(x.days)} 天`:x.days===0?'今天到期':`還剩 ${x.days} 天`;
+      return`<div class="priority-item ${tc}">
+        <span class="pi-name">${x.name}</span>
+        <span class="pi-batch">${x.batch||'—'}</span>
+        <span class="pi-exp">到期：${x.expDate}</span>
+        <span class="pi-days">${dt}</span>
+        <span class="pi-qty">庫存 ${x.qty??'—'}</span>
+        <span class="pi-tag ${tg}">${tt}</span>
+      </div>`;
+    }).join('')+'</div>';
+  }
+  showingAll=false;
+  renderTable();
+}
+
+function renderTable(){
+  let rows=currentFilter==='all'?computed:computed.filter(x=>x.type===currentFilter);
+  if(!rows.length){
+    document.getElementById('tableBody').innerHTML='<tr><td colspan="8" style="text-align:center;color:#888780;padding:24px;font-size:26px">此分類無資料</td></tr>';
+    document.getElementById('showAllBtn').style.display='none';
+    return;
+  }
+  const LIMIT=25;
+  const display=(showingAll||rows.length<=LIMIT)?rows:rows.slice(0,LIMIT);
+  const hidden=rows.length-display.length;
+  document.getElementById('tableBody').innerHTML=display.map(x=>{
+    const bc={scrapped:'badge-scrapped',expired:'badge-expired',urgent:'badge-urgent',week:'badge-week',safe:'badge-safe'}[x.type];
+    const bt={scrapped:'應報廢',expired:'已過期',urgent:'緊急',week:'本週',safe:'安全'}[x.type];
+    const dt=x.days<0?`-${Math.abs(x.days)}天`:x.days===0?'今天':`${x.days}天`;
+    const barClr={scrapped:'#D85A30',expired:'#E24B4A',urgent:'#EF9F27',week:'#378ADD',safe:'#639922'}[x.type];
+    const barW=x.days<=0?70:Math.min(70,Math.max(4,Math.round(70*(1-x.days/365))));
+    return`<tr>
+      <td><strong>${x.name}</strong></td>
+      <td style="color:#888780;font-size:22px">${x.batch||'—'}</td>
+      <td style="color:#888780;font-size:22px">${x.inDate||'—'}</td>
+      <td>${x.expDate}</td>
+      <td><div class="days-bar-wrap"><div class="days-bar" style="width:${barW}px;background:${barClr}"></div><span>${dt}</span></div></td>
+      <td>${x.qty??'—'}</td>
+      <td><span class="badge ${bc}">${bt}</span></td>
+      <td><button class="del-btn" onclick="deleteItem(${x.idx})">刪除</button></td>
+    </tr>`;
+  }).join('');
+  const btn=document.getElementById('showAllBtn');
+  if(hidden>0){btn.style.display='block';btn.textContent=showingAll?'▲ 收起':`▼ 顯示全部（還有 ${hidden} 筆）`;}
+  else btn.style.display='none';
+}
+
+function setFilter(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  showingAll=false;
+  if(computed.length)renderTable();
+}
+function setFilterCard(f){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.metric').forEach(m=>m.classList.remove('active-card'));
+  if(computed.length)renderTable();
+}
+function toggleAll(){showingAll=!showingAll;renderTable();}
+
+function addItem(){
+  const name=document.getElementById('inp-name').value.trim();
+  const batch=document.getElementById('inp-batch').value.trim();
+  const exp=document.getElementById('inp-exp').value;
+  const qty=document.getElementById('inp-qty').value;
+  const inDate=document.getElementById('inp-in').value;
+  if(!name){showMsg('err','請輸入食材名稱');return;}
+  if(!exp){showMsg('err','請輸入到期日');return;}
+  inventory.push({name,batch,expDate:exp,qty:qty?parseInt(qty):null,inDate:inDate||''});
+  saveData();
+  showMsg('ok',`已新增：${name}（${exp}）`);
+  resetForm();
+  calculate();
+}
+function deleteItem(idx){
+  if(!confirm(`確定刪除「${inventory[idx].name}」？`))return;
+  inventory.splice(idx,1);
+  saveData();
+  calculate();
+}
+function resetForm(){
+  ['inp-name','inp-batch','inp-qty'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inp-exp').value='';
+  document.getElementById('inp-in').value='';
+}
+function showMsg(type,text){
+  const m=document.getElementById('formMsg');
+  m.className='form-msg '+type;m.textContent=text;
+  setTimeout(()=>{m.className='form-msg';m.textContent='';},3000);
+}
+
+const t=new Date();
+document.getElementById('todayInput').value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+calculate();
+</script>
+</body>
+</html>
