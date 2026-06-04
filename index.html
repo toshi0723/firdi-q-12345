@@ -3,309 +3,659 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>食材效期預警看板</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<title>促銷活動 ROI 分析工具</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang TC','Microsoft JhengHei',sans-serif;background:#f4f3ef;color:#1a1a18;min-height:100vh;padding:24px}
+:root {
+  --bg: #0e0f11;
+  --bg2: #161719;
+  --bg3: #1e2023;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #f0ede8;
+  --text2: #9a9791;
+  --text3: #5c5a57;
+  --accent: #d4f264;
+  --accent2: #a8c94e;
+  --blue: #5b9cf6;
+  --orange: #f0854a;
+  --red: #e05555;
+  --green: #4caf82;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Noto Sans TC', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
 
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
-header h1{font-size:36px;font-weight:500;display:flex;align-items:center;gap:12px}
-header .sub{font-size:22px;color:#888780}
+/* ── HEADER ── */
+.header {
+  border-bottom: 1px solid var(--border);
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: rgba(14,15,17,0.92);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-mark {
+  width: 32px; height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 13px;
+  color: #0e0f11;
+}
+.logo-text { font-weight: 500; font-size: 15px; letter-spacing: -0.01em; }
+.header-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
 
-.date-bar{background:#fff;border-radius:12px;border:0.5px solid rgba(0,0,0,0.09);padding:20px 28px;margin-bottom:18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-.date-bar label{font-size:26px;color:#888780;white-space:nowrap;display:flex;align-items:center;gap:8px}
-.date-bar input[type=date]{font-size:26px;padding:8px 14px;height:52px;border-radius:10px;border:0.5px solid rgba(0,0,0,0.15);background:#f4f3ef;color:#1a1a18;cursor:pointer;outline:none}
-.date-bar input[type=date]:focus{border-color:#378ADD;background:#fff}
-.date-bar button{font-size:26px;padding:8px 24px;height:52px;border-radius:10px;border:none;background:#1a1a18;color:#fff;cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:500}
-.date-bar button:hover{background:#333}
-.date-info{font-size:22px;color:#888780;margin-left:auto}
+/* ── LAYOUT ── */
+.main { max-width: 1100px; margin: 0 auto; padding: 40px 32px 80px; }
 
-.add-form{background:#fff;border-radius:12px;border:0.5px solid rgba(0,0,0,0.09);padding:20px 28px;margin-bottom:18px}
-.form-title{font-size:26px;font-weight:500;display:flex;align-items:center;gap:8px;margin-bottom:16px;color:#1a1a18}
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px}
-.form-field{display:flex;flex-direction:column;gap:5px}
-.form-field label{font-size:22px;color:#888780}
-.form-field input{font-size:26px;padding:8px 12px;height:52px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.15);background:#f4f3ef;color:#1a1a18;outline:none}
-.form-field input:focus{border-color:#378ADD;background:#fff}
-.form-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.btn-add{font-size:26px;padding:8px 24px;height:52px;border-radius:10px;border:none;background:#1D9E75;color:#fff;cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:500}
-.btn-add:hover{background:#0F6E56}
-.btn-reset{font-size:26px;padding:8px 18px;height:52px;border-radius:10px;border:0.5px solid rgba(0,0,0,0.15);background:#f4f3ef;color:#444;cursor:pointer}
-.form-msg{font-size:22px;padding:6px 14px;border-radius:8px;display:none}
-.form-msg.ok{background:#EAF3DE;color:#27500A;display:block}
-.form-msg.err{background:#FCEBEB;color:#791F1F;display:block}
+/* ── UPLOAD ZONE ── */
+.upload-section {
+  margin-bottom: 40px;
+}
+.upload-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+  background: var(--bg2);
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(212,242,100,0.04); }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.upload-icon {
+  width: 48px; height: 48px;
+  margin: 0 auto 16px;
+  border-radius: 12px;
+  background: var(--bg3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.upload-title { font-size: 15px; font-weight: 500; margin-bottom: 6px; }
+.upload-sub { font-size: 12px; color: var(--text2); }
+.upload-hint { font-size: 11px; color: var(--text3); margin-top: 10px; font-family: var(--mono); }
 
-.top-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px}
-.metric{background:#fff;border-radius:10px;border:0.5px solid rgba(0,0,0,0.09);padding:16px 18px;cursor:pointer;transition:box-shadow .15s}
-.metric:hover{box-shadow:0 0 0 2px rgba(0,0,0,0.12)}
-.metric.active-card{box-shadow:0 0 0 2px #1a1a18}
-.metric-label{font-size:22px;color:#888780;margin-bottom:4px;display:flex;align-items:center;gap:6px}
-.metric-val{font-size:44px;font-weight:500;line-height:1.1}
-.m-scrapped .metric-val{color:#4A1B0C}
-.m-expired .metric-val{color:#A32D2D}
-.m-urgent .metric-val{color:#854F0B}
-.m-warn .metric-val{color:#185FA5}
-.m-ok .metric-val{color:#3B6D11}
+.or-row {
+  display: flex; align-items: center; gap: 16px;
+  margin: 20px 0;
+  color: var(--text3);
+  font-size: 12px;
+}
+.or-row::before, .or-row::after { content:''; flex:1; height:1px; background:var(--border); }
 
-.priority-box{background:#fff;border-radius:12px;border:0.5px solid rgba(0,0,0,0.09);padding:20px 28px;margin-bottom:18px}
-.priority-title{font-size:26px;font-weight:500;color:#1a1a18;display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.priority-empty{font-size:24px;color:#888780;padding:10px 0}
-.priority-list{display:flex;flex-direction:column;gap:10px}
-.priority-item{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:10px;font-size:26px;flex-wrap:wrap}
-.pi-scrapped{background:#F5C4B3;border-left:5px solid #D85A30}
-.pi-expired{background:#FCEBEB;border-left:5px solid #E24B4A}
-.pi-urgent{background:#FAEEDA;border-left:5px solid #EF9F27}
-.pi-week{background:#E6F1FB;border-left:5px solid #378ADD}
-.pi-name{font-weight:500;min-width:80px}
-.pi-batch{color:#888780;font-size:22px;flex:1;min-width:100px}
-.pi-exp{font-size:22px;min-width:130px}
-.pi-days{font-size:24px;font-weight:500;min-width:110px;text-align:right}
-.pi-qty{font-size:22px;color:#888780;min-width:80px;text-align:right}
-.pi-tag{font-size:20px;padding:4px 14px;border-radius:14px;font-weight:500;white-space:nowrap}
-.tag-scrapped{background:#D85A30;color:#fff}
-.tag-expired{background:#E24B4A;color:#fff}
-.tag-urgent{background:#EF9F27;color:#fff}
-.tag-week{background:#378ADD;color:#fff}
+.sample-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.sample-btn:hover { background: var(--bg3); color: var(--text); border-color: var(--border2); }
 
-.section{background:#fff;border-radius:12px;border:0.5px solid rgba(0,0,0,0.09);padding:20px 28px;margin-bottom:18px}
-.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
-.sec-title{font-size:26px;font-weight:500;color:#1a1a18;display:flex;align-items:center;gap:8px}
-.filter-row{display:flex;gap:8px;flex-wrap:wrap}
-.filter-btn{font-size:22px;padding:5px 16px;border-radius:24px;border:0.5px solid rgba(0,0,0,0.13);background:#f4f3ef;color:#444;cursor:pointer}
-.filter-btn.active{background:#1a1a18;color:#fff;border-color:#1a1a18}
+/* ── METRICS ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 32px;
+  animation: fadeUp 0.4s ease both;
+}
+.metric-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.metric-card:hover::before { opacity: 1; }
+.metric-label { font-size: 11px; color: var(--text3); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.metric-value { font-size: 24px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.metric-value.green { color: var(--accent); }
+.metric-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
 
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:26px}
-th{text-align:left;padding:10px 14px;color:#888780;font-weight:500;border-bottom:0.5px solid rgba(0,0,0,0.09);white-space:nowrap}
-td{padding:10px 14px;border-bottom:0.5px solid rgba(0,0,0,0.05);vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#fafaf7}
-.days-bar-wrap{display:flex;align-items:center;gap:10px}
-.days-bar{height:7px;border-radius:4px;min-width:3px}
-.badge{font-size:20px;padding:3px 12px;border-radius:14px;font-weight:500;white-space:nowrap}
-.badge-scrapped{background:#F5C4B3;color:#4A1B0C}
-.badge-expired{background:#FCEBEB;color:#791F1F}
-.badge-urgent{background:#FAEEDA;color:#633806}
-.badge-week{background:#E6F1FB;color:#0C447C}
-.badge-safe{background:#EAF3DE;color:#27500A}
+/* ── TABS ── */
+.tabs-row {
+  display: flex; gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.tab-btn {
+  padding: 8px 16px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text2);
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
 
-.show-all-btn{display:block;width:100%;padding:12px;font-size:22px;color:#888780;background:none;border:none;cursor:pointer;text-align:center;margin-top:8px}
-.show-all-btn:hover{color:#1a1a18}
-.del-btn{font-size:20px;padding:4px 12px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.13);background:#f4f3ef;color:#888780;cursor:pointer}
-.del-btn:hover{background:#FCEBEB;color:#791F1F;border-color:#F09595}
+/* ── CHART ── */
+.chart-wrap { position: relative; width: 100%; height: 300px; margin-bottom: 32px; }
 
-@media(max-width:700px){body{padding:14px}.date-bar,.add-form{flex-direction:column;align-items:flex-start}.date-info{margin-left:0}}
+/* ── TABLE ── */
+.table-section { animation: fadeUp 0.5s ease 0.1s both; }
+.table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.section-title { font-size: 13px; font-weight: 500; color: var(--text2); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.08em; }
+.filter-row { display: flex; gap: 8px; align-items: center; }
+.filter-row select {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  padding: 5px 10px;
+  cursor: pointer;
+  outline: none;
+}
+.filter-row select:focus { border-color: var(--accent); }
+
+.table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  overflow-x: auto;
+}
+table { width: 100%; border-collapse: collapse; min-width: 680px; }
+thead { background: var(--bg3); }
+th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  white-space: nowrap;
+}
+tr:last-child td { border-bottom: none; }
+tbody tr { transition: background 0.1s; }
+tbody tr:hover td { background: var(--bg3); }
+.best-row td { background: rgba(212,242,100,0.04) !important; }
+
+.rank-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 500;
+}
+.r1 { background: rgba(212,242,100,0.2); color: var(--accent); border: 1px solid rgba(212,242,100,0.3); }
+.r2 { background: rgba(91,156,246,0.15); color: var(--blue); border: 1px solid rgba(91,156,246,0.25); }
+.r3 { background: rgba(240,133,74,0.15); color: var(--orange); border: 1px solid rgba(240,133,74,0.25); }
+.rn { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 500;
+}
+.tag-s { background: rgba(212,242,100,0.12); color: var(--accent); }
+.tag-m { background: rgba(91,156,246,0.12); color: var(--blue); }
+.tag-l { background: rgba(240,133,74,0.12); color: var(--orange); }
+
+.roi-bar-outer { display: inline-block; width: 50px; height: 4px; background: var(--bg3); border-radius: 2px; vertical-align: middle; margin-left: 6px; }
+.roi-bar-inner { height: 100%; border-radius: 2px; }
+.mono { font-family: var(--mono); }
+.positive { color: var(--accent); }
+.neutral { color: var(--text2); }
+
+/* ── EMPTY / LOADING ── */
+.empty-state {
+  text-align: center;
+  padding: 80px 40px;
+  color: var(--text3);
+}
+.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+.empty-title { font-size: 15px; font-weight: 500; color: var(--text2); margin-bottom: 8px; }
+.empty-sub { font-size: 13px; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.results { animation: fadeUp 0.4s ease both; }
+
+/* ── BEST CALLOUT ── */
+.best-callout {
+  background: linear-gradient(135deg, rgba(212,242,100,0.08), rgba(212,242,100,0.03));
+  border: 1px solid rgba(212,242,100,0.2);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.best-badge {
+  background: var(--accent);
+  color: #0e0f11;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.best-text { font-size: 13px; color: var(--text2); }
+.best-text strong { color: var(--text); }
+
+/* ── FOOTER ── */
+.footer {
+  margin-top: 60px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text3);
+  font-size: 11px;
+  font-family: var(--mono);
+}
+
+@media (max-width: 640px) {
+  .main { padding: 24px 16px 60px; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .header { padding: 16px 20px; }
+  .table-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
 </style>
 </head>
 <body>
 
-<header>
-  <h1><i class="ti ti-alert-triangle" style="font-size:36px;color:#EF9F27"></i>食材效期預警看板</h1>
-  <span class="sub" id="dataCount">資料來源：111.csv｜共 130 筆</span>
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">ROI</div>
+    <span class="logo-text">促銷活動分析</span>
+  </div>
+  <div class="header-badge">POC v1.0</div>
 </header>
 
-<div class="date-bar">
-  <label><i class="ti ti-calendar" style="font-size:26px"></i>今天日期</label>
-  <input type="date" id="todayInput">
-  <button onclick="calculate()"><i class="ti ti-calculator" style="font-size:26px"></i>計算效期</button>
-  <span class="date-info" id="dateInfo"></span>
-</div>
+<main class="main">
 
-<div class="add-form">
-  <div class="form-title"><i class="ti ti-plus" style="font-size:26px;color:#1D9E75"></i>新增食材</div>
-  <div class="form-grid">
-    <div class="form-field"><label>食材名稱 *</label><input type="text" id="inp-name" placeholder="例：豆腐"></div>
-    <div class="form-field"><label>批號</label><input type="text" id="inp-batch" placeholder="例：BATCH001"></div>
-    <div class="form-field"><label>到期日 *</label><input type="date" id="inp-exp"></div>
-    <div class="form-field"><label>庫存量</label><input type="number" id="inp-qty" placeholder="例：100" min="0"></div>
-    <div class="form-field"><label>進貨日</label><input type="date" id="inp-in"></div>
-  </div>
-  <div class="form-actions">
-    <button class="btn-add" onclick="addItem()"><i class="ti ti-plus" style="font-size:26px"></i>加入庫存</button>
-    <button class="btn-reset" onclick="resetForm()">清除</button>
-    <span class="form-msg" id="formMsg"></span>
-  </div>
-</div>
-
-<div class="top-cards" id="topCards"></div>
-
-<div class="priority-box">
-  <div class="priority-title">
-    <i class="ti ti-flame" style="font-size:26px;color:#E24B4A"></i>
-    需要處理的品項
-    <span id="priorityCount" style="font-size:22px;color:#888780;font-weight:400"></span>
-  </div>
-  <div id="priorityList"><div class="priority-empty">請先選擇今天日期並按「計算效期」</div></div>
-</div>
-
-<div class="section">
-  <div class="sec-header">
-    <div class="sec-title"><i class="ti ti-list" style="font-size:26px;color:#888780"></i>全部庫存明細</div>
-    <div class="filter-row">
-      <button class="filter-btn active" onclick="setFilter('all',this)">全部</button>
-      <button class="filter-btn" onclick="setFilter('scrapped',this)" style="border-color:#D85A30;color:#993C1D">應報廢</button>
-      <button class="filter-btn" onclick="setFilter('expired',this)">已過期</button>
-      <button class="filter-btn" onclick="setFilter('urgent',this)">緊急 ≤3天</button>
-      <button class="filter-btn" onclick="setFilter('week',this)">本週內</button>
-      <button class="filter-btn" onclick="setFilter('safe',this)">安全</button>
+  <!-- Upload -->
+  <div class="upload-section">
+    <div class="upload-zone" id="dropzone">
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="handleFile(this.files[0])">
+      <div class="upload-icon">📂</div>
+      <div class="upload-title">拖曳或點擊上傳 Excel / CSV</div>
+      <div class="upload-sub">支援 .xlsx · .xls · .csv 格式</div>
+      <div class="upload-hint">欄位需包含：活動名稱（或活動）、成本、營收（或收益）</div>
     </div>
+    <div class="or-row">或</div>
+    <button class="sample-btn" onclick="loadSample()">
+      <span>📊</span> 載入內建範例資料（89 筆 MKT-004）
+    </button>
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>食材</th><th>批號</th><th>進貨日</th><th>到期日</th><th>剩餘天數</th><th>庫存量</th><th>狀態</th><th></th>
-      </tr></thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+
+  <!-- Empty state -->
+  <div class="empty-state" id="emptyState">
+    <div class="empty-icon">📈</div>
+    <div class="empty-title">尚無資料</div>
+    <div class="empty-sub">上傳 Excel 或載入範例資料開始分析</div>
   </div>
-  <button class="show-all-btn" id="showAllBtn" onclick="toggleAll()" style="display:none"></button>
-</div>
+
+  <!-- Results -->
+  <div class="results" id="results" style="display:none">
+
+    <!-- Metrics -->
+    <div class="metrics-grid" id="metricsGrid"></div>
+
+    <!-- Best callout -->
+    <div class="best-callout" id="bestCallout"></div>
+
+    <!-- Chart -->
+    <div class="tabs-row">
+      <button class="tab-btn active" onclick="switchTab('roi',this)">ROI 排行</button>
+      <button class="tab-btn" onclick="switchTab('profit',this)">淨利潤</button>
+      <button class="tab-btn" onclick="switchTab('type',this)">類型平均</button>
+      <button class="tab-btn" onclick="switchTab('scatter',this)">成本 vs 收益</button>
+    </div>
+    <div class="chart-wrap"><canvas id="mainChart" role="img" aria-label="促銷ROI分析圖表"></canvas></div>
+
+    <!-- Table -->
+    <div class="table-section">
+      <div class="table-header">
+        <span class="section-title" id="tableTitle">排行榜</span>
+        <div class="filter-row">
+          <select id="filterType" onchange="applyFilters()">
+            <option value="">全部類型</option>
+          </select>
+          <select id="filterPeriod" onchange="applyFilters()">
+            <option value="">全部期間</option>
+          </select>
+          <select id="filterTop" onchange="applyFilters()">
+            <option value="10">前 10 名</option>
+            <option value="20">前 20 名</option>
+            <option value="50">前 50 名</option>
+            <option value="999">全部</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<footer class="main footer">
+  <span>促銷 ROI 分析工具 · POC v1.0</span>
+  <span id="dataInfo">—</span>
+</footer>
 
 <script>
-const SEED=[{"name":"豆腐","batch":"BATCH1000","inDate":"2026-01-01","expDate":"2026-01-31","qty":372},{"name":"豆腐","batch":"b-1001","inDate":"2026-02-02","expDate":"2026-03-04","qty":357},{"name":"豆腐","batch":"BATCH1002","inDate":"2026-04-03","expDate":"2026-05-03","qty":487},{"name":"牛奶","batch":"BATCH1003","inDate":"2026-04-04","expDate":"2026-04-11","qty":126},{"name":"菇類","batch":"b-1004","inDate":"2026-05-05","expDate":"2026-05-12","qty":312},{"name":"起司","batch":"b-1005","inDate":"2026-06-06","expDate":"2026-12-03","qty":140},{"name":"菇類","batch":"b-1006","inDate":"2026-07-07","expDate":"2026-07-14","qty":55},{"name":"蝦仁","batch":"b-1007","inDate":"2026-08-08","expDate":"2027-02-04","qty":255},{"name":"鮭魚","batch":"BATCH1008","inDate":"2026-09-09","expDate":"2026-10-29","qty":234},{"name":"豬絞肉","batch":"BATCH1009","inDate":"2026-10-10","expDate":"2026-10-17","qty":106},{"name":"醬油","batch":"B1010","inDate":"2026-11-11","expDate":"2027-05-10","qty":186},{"name":"雞胸肉","batch":"b-1011","inDate":"2026-01-12","expDate":"2026-07-11","qty":26},{"name":"麵粉","batch":"b-1012","inDate":"2026-01-13","expDate":"2026-07-12","qty":368},{"name":"豬絞肉","batch":"BATCH1013","inDate":"2026-02-14","expDate":"2026-02-21","qty":63},{"name":"鮭魚","batch":"BATCH1014","inDate":"2026-03-15","expDate":"2026-05-04","qty":450},{"name":"砂糖","batch":"BATCH1015","inDate":"2026-05-16","expDate":"2026-11-12","qty":139},{"name":"蝦仁","batch":"BATCH1016","inDate":"2026-05-17","expDate":"2026-11-13","qty":180},{"name":"奶油","batch":"b-1017","inDate":"2026-01-18","expDate":"2026-07-17","qty":447},{"name":"起司","batch":"BATCH1018","inDate":"2026-02-19","expDate":"2026-08-18","qty":374},{"name":"蝦仁","batch":"B1019","inDate":"2026-08-20","expDate":"2027-02-16","qty":197},{"name":"紅蘿蔔","batch":"b-1020","inDate":"2026-09-21","expDate":"2026-10-01","qty":223},{"name":"雞蛋","batch":"BATCH1021","inDate":"2026-10-22","expDate":"2026-10-29","qty":137},{"name":"蝦仁","batch":"b-1022","inDate":"2026-11-23","expDate":"2027-05-22","qty":270},{"name":"紅蘿蔔","batch":"BATCH1023","inDate":"2026-01-24","expDate":"2026-02-03","qty":453},{"name":"洋蔥","batch":"BATCH1024","inDate":"2026-01-25","expDate":"2026-02-01","qty":34},{"name":"起司","batch":"B1025","inDate":"2026-03-26","expDate":"2026-09-22","qty":108},{"name":"雞蛋","batch":"BATCH1026","inDate":"2026-03-27","expDate":"2026-04-03","qty":393},{"name":"白米","batch":"BATCH1027","inDate":"2026-05-28","expDate":"2026-11-24","qty":491},{"name":"蝦仁","batch":"B1028","inDate":"2026-05-01","expDate":"2026-10-28","qty":261},{"name":"食用油","batch":"BATCH1029","inDate":"2026-01-02","expDate":"2026-07-01","qty":20},{"name":"鮭魚","batch":"BATCH1031","inDate":"2026-08-04","expDate":"2026-09-23","qty":201},{"name":"醬油","batch":"B1032","inDate":"2026-09-05","expDate":"2027-03-04","qty":135},{"name":"牛奶","batch":"BATCH1033","inDate":"2026-10-06","expDate":"2026-10-13","qty":268},{"name":"麵粉","batch":"B1034","inDate":"2026-11-07","expDate":"2027-05-06","qty":343},{"name":"蝦仁","batch":"b-1035","inDate":"2026-12-08","expDate":"2027-06-06","qty":419},{"name":"牛奶","batch":"b-1036","inDate":"2026-01-09","expDate":"2026-01-16","qty":54},{"name":"菇類","batch":"B1037","inDate":"2026-02-10","expDate":"2026-02-17","qty":328},{"name":"馬鈴薯","batch":"B1038","inDate":"2026-03-11","expDate":"2026-04-30","qty":119},{"name":"蝦仁","batch":"B1039","inDate":"2026-05-12","expDate":"2026-11-08","qty":127},{"name":"雞胸肉","batch":"b-1040","inDate":"2026-05-13","expDate":"2026-11-09","qty":191},{"name":"雞蛋","batch":"b-1041","inDate":"2026-06-14","expDate":"2026-06-21","qty":426},{"name":"豬絞肉","batch":"b-1042","inDate":"2026-02-15","expDate":"2026-02-22","qty":479},{"name":"洋蔥","batch":"b-1043","inDate":"2026-08-16","expDate":"2026-08-23","qty":148},{"name":"白米","batch":"BATCH1044","inDate":"2026-04-17","expDate":"2026-10-14","qty":473},{"name":"奶油","batch":"B1045","inDate":"2026-05-18","expDate":"2026-11-14","qty":154},{"name":"菇類","batch":"BATCH1046","inDate":"2026-11-19","expDate":"2026-11-26","qty":204},{"name":"豆腐","batch":"BATCH1047","inDate":"2026-12-20","expDate":"2027-01-19","qty":203},{"name":"豬絞肉","batch":"b-1048","inDate":"2026-01-21","expDate":"2026-01-28","qty":86},{"name":"洋蔥","batch":"B1049","inDate":"2026-02-22","expDate":"2026-03-01","qty":65},{"name":"牛奶","batch":"B1050","inDate":"2026-03-23","expDate":"2026-03-30","qty":492},{"name":"番茄","batch":"B1051","inDate":"2026-04-24","expDate":"2026-05-01","qty":220},{"name":"牛奶","batch":"b-1052","inDate":"2026-05-25","expDate":"2026-06-01","qty":289},{"name":"起司","batch":"BATCH1053","inDate":"2026-06-26","expDate":"2026-12-23","qty":356},{"name":"洋蔥","batch":"b-1054","inDate":"2026-02-27","expDate":"2026-03-06","qty":270},{"name":"番茄","batch":"BATCH1055","inDate":"2026-03-28","expDate":"2026-04-04","qty":109},{"name":"洋蔥","batch":"BATCH1056","inDate":"2026-04-01","expDate":"2026-04-08","qty":280},{"name":"豆腐","batch":"B1057","inDate":"2026-10-02","expDate":"2026-11-01","qty":21},{"name":"蝦仁","batch":"B1058","inDate":"2026-11-03","expDate":"2027-05-02","qty":152},{"name":"豆腐","batch":"b-1059","inDate":"2026-12-04","expDate":"2027-01-03","qty":238},{"name":"紅蘿蔔","batch":"b-1060","inDate":"2026-01-05","expDate":"2026-01-15","qty":285},{"name":"豆腐","batch":"B1061","inDate":"2026-02-06","expDate":"2026-03-08","qty":128},{"name":"起司","batch":"B1062","inDate":"2026-03-07","expDate":"2026-09-03","qty":126},{"name":"紅蘿蔔","batch":"BATCH1063","inDate":"2026-04-08","expDate":"2026-04-18","qty":9},{"name":"紅蘿蔔","batch":"B1064","inDate":"2026-05-09","expDate":"2026-05-19","qty":111},{"name":"豬絞肉","batch":"b-1065","inDate":"2026-06-10","expDate":"2026-06-17","qty":349},{"name":"砂糖","batch":"BATCH1066","inDate":"2026-07-11","expDate":"2027-01-07","qty":197},{"name":"豬絞肉","batch":"b-1067","inDate":"2026-08-12","expDate":"2026-08-19","qty":227},{"name":"麵粉","batch":"BATCH1068","inDate":"2026-09-13","expDate":"2027-03-12","qty":55},{"name":"菇類","batch":"B1069","inDate":"2026-10-14","expDate":"2026-10-21","qty":199},{"name":"雞蛋","batch":"BATCH1070","inDate":"2026-11-15","expDate":"2026-11-22","qty":371},{"name":"食用油","batch":"B1071","inDate":"2026-12-16","expDate":"2027-06-14","qty":72},{"name":"高麗菜","batch":"B1072","inDate":"2026-01-17","expDate":"2026-01-27","qty":50},{"name":"高麗菜","batch":"BATCH1073","inDate":"2026-02-18","expDate":"2026-02-28","qty":353},{"name":"蝦仁","batch":"B1074","inDate":"2026-04-19","expDate":"2026-10-16","qty":73},{"name":"奶油","batch":"B1075","inDate":"2026-04-20","expDate":"2026-10-17","qty":224},{"name":"番茄","batch":"b-1076","inDate":"2026-05-21","expDate":"2026-05-28","qty":16},{"name":"高麗菜","batch":"BATCH1077","inDate":"2026-06-22","expDate":"2026-07-02","qty":124},{"name":"起司","batch":"B1078","inDate":"2026-07-23","expDate":"2027-01-19","qty":275},{"name":"番茄","batch":"BATCH1079","inDate":"2026-08-24","expDate":"2026-08-31","qty":10},{"name":"醬油","batch":"B1080","inDate":"2026-09-25","expDate":"2027-03-24","qty":82},{"name":"白米","batch":"BATCH1081","inDate":"2026-10-26","expDate":"2027-04-24","qty":445},{"name":"番茄","batch":"B1082","inDate":"2026-11-27","expDate":"2026-12-04","qty":126},{"name":"起司","batch":"","inDate":"2026-01-28","expDate":"2026-07-27","qty":257},{"name":"洋蔥","batch":"B1084","inDate":"2026-01-01","expDate":"2026-01-08","qty":176},{"name":"雞胸肉","batch":"B1085","inDate":"2026-02-02","expDate":"2026-08-01","qty":348},{"name":"洋蔥","batch":"BATCH1086","inDate":"2026-03-03","expDate":"2026-03-10","qty":357},{"name":"豆腐","batch":"BATCH1087","inDate":"2026-04-04","expDate":"2026-05-04","qty":333},{"name":"鮭魚","batch":"b-1088","inDate":"2026-05-05","expDate":"2026-06-24","qty":12},{"name":"紅蘿蔔","batch":"B1089","inDate":"2026-06-06","expDate":"2026-06-16","qty":76},{"name":"豬絞肉","batch":"b-1090","inDate":"2026-07-07","expDate":"2026-07-14","qty":396},{"name":"菇類","batch":"b-1091","inDate":"2026-03-08","expDate":"2026-03-15","qty":334},{"name":"雞蛋","batch":"B1092","inDate":"2026-09-09","expDate":"2026-09-16","qty":461},{"name":"雞蛋","batch":"b-1093","inDate":"2026-10-10","expDate":"2026-10-17","qty":199},{"name":"菇類","batch":"BATCH1094","inDate":"2026-11-11","expDate":"2026-11-18","qty":150},{"name":"馬鈴薯","batch":"BATCH1095","inDate":"2026-12-12","expDate":"2027-01-31","qty":408},{"name":"起司","batch":"BATCH1096","inDate":"2026-01-13","expDate":"2026-07-12","qty":239},{"name":"牛奶","batch":"BATCH1097","inDate":"2026-02-14","expDate":"2026-02-21","qty":290},{"name":"麵粉","batch":"b-1098","inDate":"2026-03-15","expDate":"2026-09-11","qty":250},{"name":"紅蘿蔔","batch":"b-1099","inDate":"2026-04-16","expDate":"2026-04-26","qty":388},{"name":"雞蛋","batch":"BATCH1100","inDate":"2026-05-17","expDate":"2026-05-24","qty":269},{"name":"鮭魚","batch":"BATCH1101","inDate":"2026-06-18","expDate":"2026-08-07","qty":143},{"name":"紅蘿蔔","batch":"BATCH1102","inDate":"2026-07-19","expDate":"2026-07-29","qty":43},{"name":"醬油","batch":"b-1103","inDate":"2026-08-20","expDate":"2027-02-16","qty":181},{"name":"高麗菜","batch":"b-1104","inDate":"2026-04-21","expDate":"2026-05-01","qty":368},{"name":"紅蘿蔔","batch":"BATCH1105","inDate":"2026-10-22","expDate":"2026-11-01","qty":55},{"name":"食用油","batch":"b-1106","inDate":"2026-11-23","expDate":"2027-05-22","qty":112},{"name":"砂糖","batch":"BATCH1107","inDate":"2026-12-24","expDate":"2027-06-22","qty":279},{"name":"砂糖","batch":"b-1108","inDate":"2026-02-25","expDate":"2026-08-24","qty":223},{"name":"砂糖","batch":"B1109","inDate":"2026-02-26","expDate":"2026-08-25","qty":148},{"name":"蝦仁","batch":"B1110","inDate":"2026-03-27","expDate":"2026-09-23","qty":257},{"name":"醬油","batch":"BATCH1111","inDate":"2026-05-28","expDate":"2026-11-24","qty":441},{"name":"番茄","batch":"b-1112","inDate":"2026-06-01","expDate":"2026-06-08","qty":229},{"name":"食用油","batch":"b-1113","inDate":"2026-06-02","expDate":"2026-11-29","qty":276},{"name":"洋蔥","batch":"BATCH1114","inDate":"2026-07-03","expDate":"2026-07-10","qty":262},{"name":"砂糖","batch":"b-1115","inDate":"2026-03-04","expDate":"2026-08-31","qty":252},{"name":"鮭魚","batch":"","inDate":"2026-09-05","expDate":"2026-10-25","qty":268},{"name":"麵粉","batch":"B1117","inDate":"2026-05-06","expDate":"2026-11-02","qty":358},{"name":"菇類","batch":"BATCH1118","inDate":"2026-11-07","expDate":"2026-11-14","qty":1},{"name":"麵粉","batch":"B1119","inDate":"2026-01-08","expDate":"2026-07-07","qty":451},{"name":"番茄","batch":"BATCH1120","inDate":"2026-01-09","expDate":"2026-01-16","qty":13},{"name":"紅蘿蔔","batch":"BATCH1121","inDate":"2026-03-10","expDate":"2026-03-20","qty":212},{"name":"蝦仁","batch":"BATCH1122","inDate":"2026-03-11","expDate":"2026-09-07","qty":18},{"name":"奶油","batch":"BATCH1123","inDate":"2026-05-12","expDate":"2026-11-08","qty":219},{"name":"麵粉","batch":"BATCH1124","inDate":"2026-05-13","expDate":"2026-11-09","qty":330},{"name":"紅蘿蔔","batch":"BATCH1125","inDate":"2026-06-14","expDate":"2026-06-24","qty":44},{"name":"鮭魚","batch":"B1126","inDate":"2026-07-15","expDate":"2026-09-03","qty":84},{"name":"馬鈴薯","batch":"B1127","inDate":"2026-08-16","expDate":"2026-10-05","qty":94},{"name":"麵粉","batch":"B1128","inDate":"2026-09-17","expDate":"2027-03-16","qty":366},{"name":"白米","batch":"b-1129","inDate":"2026-10-18","expDate":"2027-04-16","qty":380},{"name":"蝦仁","batch":"B1019b","inDate":"2026-08-20","expDate":"2027-02-16","qty":197}];
+// ── SAMPLE DATA ──
+const SAMPLE = [{"type":"項目1","period":"項目3","cost":18.8,"revenue":23142,"orders":299},{"type":"項目2","period":"C","cost":54.6,"revenue":43622,"orders":321},{"type":"A","period":"C","cost":455.3,"revenue":327690,"orders":467},{"type":"項目2","period":"項目2","cost":41,"revenue":24927,"orders":346},{"type":"B","period":"項目3","cost":55,"revenue":32868,"orders":35},{"type":"A","period":"C","cost":43.8,"revenue":17815,"orders":416},{"type":"C","period":"C","cost":102.8,"revenue":37231,"orders":184},{"type":"項目3","period":"A","cost":116,"revenue":41747,"orders":225},{"type":"C","period":"A","cost":22.7,"revenue":7800,"orders":430},{"type":"C","period":"A","cost":22.7,"revenue":7800,"orders":430},{"type":"A","period":"B","cost":120.3,"revenue":30920,"orders":183},{"type":"項目1","period":"項目2","cost":152.9,"revenue":38611,"orders":79},{"type":"B","period":"項目2","cost":169.2,"revenue":38369,"orders":335},{"type":"C","period":"B","cost":209.8,"revenue":45481,"orders":259},{"type":"A","period":"B","cost":214.2,"revenue":39870,"orders":304},{"type":"C","period":"項目1","cost":231.5,"revenue":41642,"orders":493},{"type":"項目3","period":"項目3","cost":30,"revenue":5388,"orders":1},{"type":"A","period":"A","cost":109.8,"revenue":19387,"orders":433},{"type":"B","period":"B","cost":200.6,"revenue":34025,"orders":69},{"type":"項目3","period":"項目3","cost":298.7,"revenue":49932,"orders":452},{"type":"項目3","period":"項目3","cost":300.7,"revenue":49541,"orders":225},{"type":"C","period":"項目3","cost":266.8,"revenue":40570,"orders":53},{"type":"C","period":"B","cost":164.7,"revenue":24772,"orders":361},{"type":"A","period":"項目3","cost":220.5,"revenue":30858,"orders":390},{"type":"項目3","period":"C","cost":355.6,"revenue":49753,"orders":218},{"type":"A","period":"C","cost":328.9,"revenue":45270,"orders":465},{"type":"項目1","period":"項目2","cost":306.3,"revenue":41971,"orders":226},{"type":"項目2","period":"A","cost":42.1,"revenue":5379,"orders":251},{"type":"項目2","period":"項目3","cost":144.2,"revenue":17974,"orders":444},{"type":"項目1","period":"項目1","cost":269.9,"revenue":33483,"orders":230},{"type":"C","period":"C","cost":222.8,"revenue":27573,"orders":435},{"type":"項目1","period":"項目2","cost":365.1,"revenue":43741,"orders":275},{"type":"B","period":"C","cost":346.5,"revenue":39974,"orders":429},{"type":"項目2","period":"C","cost":331.6,"revenue":36903,"orders":309},{"type":"C","period":"項目2","cost":292.7,"revenue":32508,"orders":70},{"type":"項目2","period":"項目1","cost":301.9,"revenue":31119,"orders":388},{"type":"C","period":"項目3","cost":282.7,"revenue":28832,"orders":458},{"type":"項目1","period":"B","cost":398,"revenue":40291,"orders":430},{"type":"C","period":"A","cost":191.7,"revenue":19316,"orders":429},{"type":"項目2","period":"A","cost":326.3,"revenue":32819,"orders":493},{"type":"項目1","period":"項目2","cost":372.3,"revenue":36463,"orders":75},{"type":"項目3","period":"B","cost":446.1,"revenue":40793,"orders":71},{"type":"項目1","period":"C","cost":377.1,"revenue":34283,"orders":455},{"type":"項目2","period":"B","cost":297.3,"revenue":27016,"orders":145},{"type":"C","period":"C","cost":430.5,"revenue":36947,"orders":341},{"type":"A","period":"項目2","cost":419,"revenue":35786,"orders":401},{"type":"項目3","period":"項目1","cost":197,"revenue":16666,"orders":399},{"type":"C","period":"C","cost":236.8,"revenue":19411,"orders":177},{"type":"C","period":"B","cost":339.5,"revenue":27615,"orders":131},{"type":"項目2","period":"項目1","cost":354.5,"revenue":27983,"orders":403},{"type":"A","period":"C","cost":179.9,"revenue":14145,"orders":455},{"type":"C","period":"C","cost":474.7,"revenue":36836,"orders":373},{"type":"項目3","period":"項目3","cost":434.5,"revenue":32897,"orders":379},{"type":"A","period":"項目2","cost":162,"revenue":11902,"orders":85},{"type":"C","period":"項目1","cost":357.1,"revenue":26075,"orders":231},{"type":"C","period":"B","cost":321.5,"revenue":22836,"orders":132},{"type":"B","period":"C","cost":355,"revenue":24382,"orders":300},{"type":"A","period":"B","cost":234.7,"revenue":15478,"orders":144},{"type":"項目3","period":"C","cost":459.7,"revenue":28837,"orders":197},{"type":"項目1","period":"項目3","cost":439.4,"revenue":26426,"orders":238},{"type":"B","period":"A","cost":363.8,"revenue":21670,"orders":146},{"type":"A","period":"C","cost":195.1,"revenue":11091,"orders":378},{"type":"項目2","period":"C","cost":297,"revenue":16708,"orders":374},{"type":"項目3","period":"B","cost":335.4,"revenue":16515,"orders":497},{"type":"C","period":"項目1","cost":435,"revenue":21042,"orders":272},{"type":"項目2","period":"C","cost":316.7,"revenue":14731,"orders":158},{"type":"C","period":"A","cost":166.1,"revenue":7664,"orders":396},{"type":"B","period":"C","cost":166,"revenue":7093,"orders":115},{"type":"A","period":"C","cost":429.1,"revenue":17741,"orders":423},{"type":"B","period":"項目2","cost":144.6,"revenue":5588,"orders":325},{"type":"項目2","period":"B","cost":431.5,"revenue":16638,"orders":318},{"type":"C","period":"項目1","cost":459.1,"revenue":17443,"orders":420},{"type":"項目1","period":"項目2","cost":320.6,"revenue":12077,"orders":410},{"type":"B","period":"項目2","cost":263,"revenue":9657,"orders":93},{"type":"A","period":"A","cost":311.1,"revenue":11209,"orders":197},{"type":"項目2","period":"項目1","cost":470.6,"revenue":15544,"orders":422},{"type":"項目2","period":"項目2","cost":257.3,"revenue":7964,"orders":422},{"type":"C","period":"C","cost":385,"revenue":11844,"orders":371},{"type":"(空白)","period":"C","cost":468.7,"revenue":12703,"orders":317},{"type":"A","period":"B","cost":492.6,"revenue":11106,"orders":12},{"type":"A","period":"C","cost":124.8,"revenue":2736,"orders":338},{"type":"項目2","period":"C","cost":471,"revenue":9948,"orders":174},{"type":"項目2","period":"項目1","cost":477.4,"revenue":9916,"orders":260},{"type":"項目2","period":"項目2","cost":388.5,"revenue":7629,"orders":304},{"type":"項目1","period":"項目2","cost":343.8,"revenue":4596,"orders":280},{"type":"項目2","period":"項目2","cost":362.7,"revenue":4566,"orders":179},{"type":"項目3","period":"A","cost":212.8,"revenue":2518,"orders":373},{"type":"B","period":"B","cost":350.6,"revenue":4074,"orders":20},{"type":"B","period":"B","cost":372.6,"revenue":1537,"orders":180}];
 
-function loadData(){try{const s=localStorage.getItem('food_v4');return s?JSON.parse(s):[...SEED];}catch(e){return[...SEED];}}
-function saveData(){try{localStorage.setItem('food_v4',JSON.stringify(inventory));}catch(e){}}
+let data = [];
+let chartInst = null;
+let curTab = 'roi';
 
-let inventory=loadData(), computed=[], currentFilter='all', showingAll=false;
-
-function daysBetween(today,exp){
-  const t=new Date(today);t.setHours(0,0,0,0);
-  const e=new Date(exp);e.setHours(0,0,0,0);
-  return Math.round((e-t)/86400000);
+// ── HELPERS ──
+function calcROI(cost, revenue) { return ((revenue - cost) / cost * 100); }
+function fmt(n) { return Number(n).toLocaleString('zh-TW', { maximumFractionDigits: 1 }); }
+function fmtROI(n) {
+  if (n >= 10000) return (n / 1000).toFixed(1) + 'K%';
+  if (n >= 1000) return (n / 1000).toFixed(2) + 'K%';
+  return n.toFixed(1) + '%';
 }
-function classify(d){if(d<-7)return'scrapped';if(d<0)return'expired';if(d<=3)return'urgent';if(d<=7)return'week';return'safe';}
+function getRating(roi) {
+  if (roi >= 10000) return { label: '超高效', cls: 'tag-s' };
+  if (roi >= 3000)  return { label: '良好',   cls: 'tag-m' };
+  return { label: '待優化', cls: 'tag-l' };
+}
 
-function calculate(){
-  const val=document.getElementById('todayInput').value;
-  if(!val){alert('請先選擇今天日期');return;}
-  const todayDate=new Date(val);
-  const weekEnd=new Date(todayDate);weekEnd.setDate(weekEnd.getDate()+7);
-  const weekDay=['日','一','二','三','四','五','六'][todayDate.getDay()];
+// ── FILE HANDLING ──
+function handleFile(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      processRows(rows, file.name);
+    } catch(err) { alert('讀取失敗：' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
 
-  computed=inventory.map((d,i)=>{const days=daysBetween(val,d.expDate);return{...d,days,type:classify(days),idx:i};}).sort((a,b)=>a.days-b.days);
-
-  const cnt={scrapped:0,expired:0,urgent:0,week:0,safe:0};
-  computed.forEach(x=>cnt[x.type]++);
-
-  document.getElementById('dateInfo').textContent=`${val}（週${weekDay}）`;
-  document.getElementById('dataCount').textContent=`共 ${inventory.length} 筆`;
-
-  document.getElementById('topCards').innerHTML=`
-    <div class="metric m-scrapped" onclick="setFilterCard('scrapped')"><div class="metric-label"><i class="ti ti-trash" style="font-size:22px"></i>應報廢</div><div class="metric-val">${cnt.scrapped}</div></div>
-    <div class="metric m-expired"  onclick="setFilterCard('expired')"><div class="metric-label"><i class="ti ti-x" style="font-size:22px"></i>已過期</div><div class="metric-val">${cnt.expired}</div></div>
-    <div class="metric m-urgent"   onclick="setFilterCard('urgent')"><div class="metric-label"><i class="ti ti-flame" style="font-size:22px"></i>緊急 ≤3天</div><div class="metric-val">${cnt.urgent}</div></div>
-    <div class="metric m-warn"     onclick="setFilterCard('week')"><div class="metric-label"><i class="ti ti-alert-triangle" style="font-size:22px"></i>本週內</div><div class="metric-val">${cnt.week}</div></div>
-    <div class="metric m-ok"       onclick="setFilterCard('safe')"><div class="metric-label"><i class="ti ti-check" style="font-size:22px"></i>安全</div><div class="metric-val">${cnt.safe}</div></div>
-  `;
-
-  const priority=computed.filter(x=>x.type!=='safe');
-  document.getElementById('priorityCount').textContent=priority.length?`共 ${priority.length} 項`:'';
-
-  if(!priority.length){
-    document.getElementById('priorityList').innerHTML='<div class="priority-empty" style="color:#3B6D11"><i class="ti ti-circle-check"></i> 本週所有食材都在安全期內！</div>';
-  } else {
-    document.getElementById('priorityList').innerHTML='<div class="priority-list">'+priority.map(x=>{
-      const tc={scrapped:'pi-scrapped',expired:'pi-expired',urgent:'pi-urgent',week:'pi-week'}[x.type];
-      const tg={scrapped:'tag-scrapped',expired:'tag-expired',urgent:'tag-urgent',week:'tag-week'}[x.type];
-      const tt={scrapped:'應報廢',expired:'已過期',urgent:'緊急',week:'本週'}[x.type];
-      const dt=x.days<0?`過期 ${Math.abs(x.days)} 天`:x.days===0?'今天到期':`還剩 ${x.days} 天`;
-      return`<div class="priority-item ${tc}">
-        <span class="pi-name">${x.name}</span>
-        <span class="pi-batch">${x.batch||'—'}</span>
-        <span class="pi-exp">到期：${x.expDate}</span>
-        <span class="pi-days">${dt}</span>
-        <span class="pi-qty">庫存 ${x.qty??'—'}</span>
-        <span class="pi-tag ${tg}">${tt}</span>
-      </div>`;
-    }).join('')+'</div>';
+function processRows(rows, filename) {
+  const colMap = {
+    name:    ['活動名稱','活動','name','campaign'],
+    cost:    ['成本','cost','費用','投入'],
+    revenue: ['營收','收益','revenue','sales','業績'],
+    type:    ['類型','type','活動類型','category'],
+    period:  ['期間','period','週期'],
+    orders:  ['訂單數','訂單','orders','order']
+  };
+  function findCol(row, keys) {
+    const rkeys = Object.keys(row).map(k => k.trim().toLowerCase());
+    for (const k of keys) {
+      const match = Object.keys(row).find(rk => rk.trim().toLowerCase().includes(k.toLowerCase()));
+      if (match) return match;
+    }
+    return null;
   }
-  showingAll=false;
+  if (rows.length === 0) { alert('找不到資料列'); return; }
+  const sample = rows[0];
+  const costCol    = findCol(sample, colMap.cost);
+  const revCol     = findCol(sample, colMap.revenue);
+  const typeCol    = findCol(sample, colMap.type) || findCol(sample, colMap.name);
+  const periodCol  = findCol(sample, colMap.period);
+  const ordersCol  = findCol(sample, colMap.orders);
+
+  if (!costCol || !revCol) { alert('找不到成本或營收欄位，請確認欄位名稱包含「成本」「營收」'); return; }
+
+  data = rows.map(r => {
+    const cost    = parseFloat(String(r[costCol] || '').replace(/[元,\s]/g, '')) || 0;
+    const revenue = parseFloat(String(r[revCol]  || '').replace(/[元,\s]/g, '')) || 0;
+    const type    = typeCol   ? String(r[typeCol]   || '').trim() || '未知' : '未知';
+    const period  = periodCol ? String(r[periodCol] || '').trim() || '—'   : '—';
+    const orders  = ordersCol ? parseInt(r[ordersCol]) || 0 : 0;
+    return { type, period, cost, revenue, orders };
+  }).filter(r => r.cost > 0 && r.revenue > 0);
+
+  data = data.map(r => ({ ...r, roi: calcROI(r.cost, r.revenue), profit: r.revenue - r.cost }))
+             .sort((a, b) => b.roi - a.roi);
+
+  document.getElementById('dataInfo').textContent = `${filename} · ${data.length} 筆`;
+  buildFilters();
+  render();
+}
+
+function loadSample() {
+  data = SAMPLE.map(r => ({ ...r, roi: calcROI(r.cost, r.revenue), profit: r.revenue - r.cost }))
+               .sort((a, b) => b.roi - a.roi);
+  document.getElementById('dataInfo').textContent = `MKT-004 內建資料 · ${data.length} 筆`;
+  buildFilters();
+  render();
+}
+
+// ── FILTERS ──
+function buildFilters() {
+  const types   = [...new Set(data.map(r => r.type))].sort();
+  const periods = [...new Set(data.map(r => r.period))].sort();
+  const ts = document.getElementById('filterType');
+  const ps = document.getElementById('filterPeriod');
+  ts.innerHTML = '<option value="">全部類型</option>' + types.map(t => `<option>${t}</option>`).join('');
+  ps.innerHTML = '<option value="">全部期間</option>' + periods.map(p => `<option>${p}</option>`).join('');
+}
+
+function getFiltered() {
+  const t = document.getElementById('filterType').value;
+  const p = document.getElementById('filterPeriod').value;
+  const top = parseInt(document.getElementById('filterTop').value);
+  return data.filter(r => (!t || r.type === t) && (!p || r.period === p)).slice(0, top);
+}
+
+function applyFilters() { render(); }
+
+// ── RENDER ──
+function render() {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('results').style.display = '';
+  renderMetrics();
+  renderBest();
   renderTable();
+  renderChart(getFiltered());
 }
 
-function renderTable(){
-  let rows=currentFilter==='all'?computed:computed.filter(x=>x.type===currentFilter);
-  if(!rows.length){
-    document.getElementById('tableBody').innerHTML='<tr><td colspan="8" style="text-align:center;color:#888780;padding:24px;font-size:26px">此分類無資料</td></tr>';
-    document.getElementById('showAllBtn').style.display='none';
-    return;
-  }
-  const LIMIT=25;
-  const display=(showingAll||rows.length<=LIMIT)?rows:rows.slice(0,LIMIT);
-  const hidden=rows.length-display.length;
-  document.getElementById('tableBody').innerHTML=display.map(x=>{
-    const bc={scrapped:'badge-scrapped',expired:'badge-expired',urgent:'badge-urgent',week:'badge-week',safe:'badge-safe'}[x.type];
-    const bt={scrapped:'應報廢',expired:'已過期',urgent:'緊急',week:'本週',safe:'安全'}[x.type];
-    const dt=x.days<0?`-${Math.abs(x.days)}天`:x.days===0?'今天':`${x.days}天`;
-    const barClr={scrapped:'#D85A30',expired:'#E24B4A',urgent:'#EF9F27',week:'#378ADD',safe:'#639922'}[x.type];
-    const barW=x.days<=0?70:Math.min(70,Math.max(4,Math.round(70*(1-x.days/365))));
-    return`<tr>
-      <td><strong>${x.name}</strong></td>
-      <td style="color:#888780;font-size:22px">${x.batch||'—'}</td>
-      <td style="color:#888780;font-size:22px">${x.inDate||'—'}</td>
-      <td>${x.expDate}</td>
-      <td><div class="days-bar-wrap"><div class="days-bar" style="width:${barW}px;background:${barClr}"></div><span>${dt}</span></div></td>
-      <td>${x.qty??'—'}</td>
-      <td><span class="badge ${bc}">${bt}</span></td>
-      <td><button class="del-btn" onclick="deleteItem(${x.idx})">刪除</button></td>
+function renderMetrics() {
+  const tot = data.length;
+  const totalCost = data.reduce((s, r) => s + r.cost, 0);
+  const totalRev  = data.reduce((s, r) => s + r.revenue, 0);
+  const avgROI    = data.reduce((s, r) => s + r.roi, 0) / data.length;
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="metric-card"><div class="metric-label">活動總數</div><div class="metric-value">${tot}</div></div>
+    <div class="metric-card"><div class="metric-label">總投入成本</div><div class="metric-value" style="font-size:18px">${fmt(totalCost)}</div></div>
+    <div class="metric-card"><div class="metric-label">總活動營收</div><div class="metric-value" style="font-size:18px">${fmt(totalRev)}</div></div>
+    <div class="metric-card"><div class="metric-label">平均 ROI</div><div class="metric-value green">${fmtROI(avgROI)}</div></div>
+  `;
+}
+
+function renderBest() {
+  const best = data[0];
+  if (!best) return;
+  document.getElementById('bestCallout').innerHTML = `
+    <div class="best-badge">★ 最划算</div>
+    <div class="best-text">
+      <strong>${best.type} × ${best.period}</strong> — 成本 ${fmt(best.cost)}，營收 ${fmt(best.revenue)}，
+      ROI <strong style="color:var(--accent)">${fmtROI(best.roi)}</strong>，淨利潤 <strong>+${fmt(best.profit)}</strong>
+    </div>
+  `;
+}
+
+function renderTable() {
+  const rows = getFiltered();
+  const maxROI = Math.max(...rows.map(r => r.roi));
+  document.getElementById('tableTitle').textContent = `排行榜 · ${rows.length} 筆`;
+  document.getElementById('tableHead').innerHTML = `<tr>
+    <th>排名</th><th>活動類型</th><th>期間</th><th>成本</th><th>營收</th><th>淨利潤</th>
+    <th>訂單數</th><th>ROI</th><th>評級</th>
+  </tr>`;
+  document.getElementById('tableBody').innerHTML = rows.map((r, i) => {
+    const rc  = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : 'rn';
+    const rt  = getRating(r.roi);
+    const pct = Math.min(100, (r.roi / maxROI) * 100).toFixed(0);
+    const bc  = r.roi >= 10000 ? '#d4f264' : r.roi >= 3000 ? '#5b9cf6' : '#f0854a';
+    const rw  = i === 0 ? 'best-row' : '';
+    return `<tr class="${rw}">
+      <td><span class="rank-badge ${rc}">${i+1}</span></td>
+      <td class="mono" style="font-weight:500">${r.type}</td>
+      <td style="color:var(--text2)">${r.period}</td>
+      <td class="mono">${fmt(r.cost)}</td>
+      <td class="mono">${fmt(r.revenue)}</td>
+      <td class="mono positive">+${fmt(r.profit)}</td>
+      <td class="mono neutral">${r.orders || '—'}</td>
+      <td>
+        <span class="mono" style="font-weight:500">${fmtROI(r.roi)}</span>
+        <span class="roi-bar-outer"><span class="roi-bar-inner" style="width:${pct}%;background:${bc}"></span></span>
+      </td>
+      <td><span class="tag ${rt.cls}">${rt.label}</span></td>
     </tr>`;
   }).join('');
-  const btn=document.getElementById('showAllBtn');
-  if(hidden>0){btn.style.display='block';btn.textContent=showingAll?'▲ 收起':`▼ 顯示全部（還有 ${hidden} 筆）`;}
-  else btn.style.display='none';
 }
 
-function setFilter(f,btn){
-  currentFilter=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  showingAll=false;
-  if(computed.length)renderTable();
-}
-function setFilterCard(f){
-  currentFilter=f;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.metric').forEach(m=>m.classList.remove('active-card'));
-  if(computed.length)renderTable();
-}
-function toggleAll(){showingAll=!showingAll;renderTable();}
-
-function addItem(){
-  const name=document.getElementById('inp-name').value.trim();
-  const batch=document.getElementById('inp-batch').value.trim();
-  const exp=document.getElementById('inp-exp').value;
-  const qty=document.getElementById('inp-qty').value;
-  const inDate=document.getElementById('inp-in').value;
-  if(!name){showMsg('err','請輸入食材名稱');return;}
-  if(!exp){showMsg('err','請輸入到期日');return;}
-  inventory.push({name,batch,expDate:exp,qty:qty?parseInt(qty):null,inDate:inDate||''});
-  saveData();
-  showMsg('ok',`已新增：${name}（${exp}）`);
-  resetForm();
-  calculate();
-}
-function deleteItem(idx){
-  if(!confirm(`確定刪除「${inventory[idx].name}」？`))return;
-  inventory.splice(idx,1);
-  saveData();
-  calculate();
-}
-function resetForm(){
-  ['inp-name','inp-batch','inp-qty'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('inp-exp').value='';
-  document.getElementById('inp-in').value='';
-}
-function showMsg(type,text){
-  const m=document.getElementById('formMsg');
-  m.className='form-msg '+type;m.textContent=text;
-  setTimeout(()=>{m.className='form-msg';m.textContent='';},3000);
+// ── CHART ──
+function switchTab(tab, el) {
+  curTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderChart(getFiltered());
 }
 
-const t=new Date();
-document.getElementById('todayInput').value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
-calculate();
+function renderChart(rows) {
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  const tc = '#5c5a57';
+  const gc = 'rgba(255,255,255,0.05)';
+
+  if (curTab === 'roi') {
+    const top = rows.slice(0, 15);
+    const labels = top.map(r => `${r.type}/${r.period}`);
+    const vals = top.map(r => parseFloat((r.roi / 1000).toFixed(2)));
+    const colors = vals.map(v => v >= 10 ? '#d4f264' : v >= 3 ? '#5b9cf6' : '#f0854a');
+    chartInst = new Chart(ctx, { type: 'bar',
+      data: { labels, datasets: [{ data: vals, backgroundColor: colors, borderRadius: 4, borderSkipped: false }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ROI: ${(c.parsed.y * 1000).toLocaleString()}%` } } },
+        scales: { y: { ticks: { color: tc, callback: v => v + 'K%' }, grid: { color: gc } }, x: { ticks: { color: tc, font: { size: 10 }, maxRotation: 40, autoSkip: false }, grid: { display: false } } } }
+    });
+  } else if (curTab === 'profit') {
+    const top = rows.slice(0, 15);
+    chartInst = new Chart(ctx, { type: 'bar',
+      data: { labels: top.map(r => `${r.type}/${r.period}`), datasets: [{ data: top.map(r => r.profit), backgroundColor: '#4caf82', borderRadius: 4, borderSkipped: false }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` 淨利潤: ${c.parsed.y.toLocaleString()}` } } },
+        scales: { y: { ticks: { color: tc, callback: v => v >= 1000 ? Math.round(v/1000)+'K' : v }, grid: { color: gc } }, x: { ticks: { color: tc, font: { size: 10 }, maxRotation: 40, autoSkip: false }, grid: { display: false } } } }
+    });
+  } else if (curTab === 'type') {
+    const types = [...new Set(data.map(r => r.type))];
+    const avgs = types.map(t => { const g = data.filter(r => r.type === t); return parseFloat((g.reduce((s, r) => s + r.roi, 0) / g.length / 1000).toFixed(2)); });
+    const palette = ['#d4f264','#5b9cf6','#4caf82','#f0854a','#e05555','#c084fc','#fb923c','#34d399'];
+    chartInst = new Chart(ctx, { type: 'bar',
+      data: { labels: types, datasets: [{ data: avgs, backgroundColor: types.map((_,i) => palette[i % palette.length]), borderRadius: 4, borderSkipped: false }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` 平均ROI: ${(c.parsed.y * 1000).toLocaleString()}%` } } },
+        scales: { y: { ticks: { color: tc, callback: v => v + 'K%' }, grid: { color: gc } }, x: { ticks: { color: tc }, grid: { display: false } } } }
+    });
+  } else {
+    const pts = rows.map(r => ({ x: r.cost, y: r.revenue, label: `${r.type}/${r.period}` }));
+    const mx = Math.max(...rows.map(r => Math.max(r.cost, r.revenue)));
+    chartInst = new Chart(ctx, { type: 'scatter',
+      data: { datasets: [{ data: pts, backgroundColor: rows.map(r => r.roi >= 10000 ? '#d4f264' : r.roi >= 3000 ? '#5b9cf6' : '#f0854a'), pointRadius: 5, pointHoverRadius: 7 }] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.raw.label}  成本:${c.raw.x}  營收:${c.raw.y.toLocaleString()}` } } },
+        scales: { x: { title: { display: true, text: '成本', color: tc }, ticks: { color: tc }, grid: { color: gc }, min: 0, max: mx * 1.1 }, y: { title: { display: true, text: '營收', color: tc }, ticks: { color: tc, callback: v => v >= 1000 ? Math.round(v/1000)+'K' : v }, grid: { color: gc }, min: 0, max: mx * 1.1 } } }
+    });
+  }
+}
+
+// ── DRAG & DROP ──
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
 </script>
 </body>
 </html>
