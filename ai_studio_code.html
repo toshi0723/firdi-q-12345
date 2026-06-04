@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>全球核彈庫存監控系統 // IMF SERVER</title>
+    
+    <!-- 引入 Google 字體以增添科技感與中文支援 -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- 引入 ECharts 核心庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+
+    <style>
+        :root {
+            --theme-color: #d48e42; /* 特務情報科技感的琥珀/棕橘色 */
+            --bg-color: #080605;
+            --grid-color: rgba(212, 142, 66, 0.05);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow: hidden;
+            color: var(--theme-color);
+        }
+
+        /* 科技感背景網格 */
+        .grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* 掃描線動畫 */
+        .scanline {
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to right, transparent, rgba(212, 142, 66, 0.4), transparent);
+            position: absolute;
+            animation: scan 8s linear infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes scan {
+            0% { top: -10%; }
+            100% { top: 110%; }
+        }
+
+        /* HUD 介面角落裝飾 */
+        .hud-corner {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-color: rgba(212, 142, 66, 0.6);
+            border-style: solid;
+            z-index: 5;
+            pointer-events: none;
+        }
+        .top-left { top: 20px; left: 20px; border-width: 3px 0 0 3px; }
+        .top-right { top: 20px; right: 20px; border-width: 3px 3px 0 0; }
+        .bottom-left { bottom: 20px; left: 20px; border-width: 0 0 3px 3px; }
+        .bottom-right { bottom: 20px; right: 20px; border-width: 0 3px 3px 0; }
+
+        /* UI 文字資訊 */
+        .ui-text {
+            position: absolute;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 12px;
+            color: rgba(212, 142, 66, 0.7);
+            z-index: 5;
+            pointer-events: none;
+            letter-spacing: 2px;
+        }
+        .ui-top-left { top: 35px; left: 85px; }
+        .ui-bottom-left { bottom: 35px; left: 85px; color: #ff3333; font-weight: bold; }
+
+        /* 地圖容器 */
+        #map-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* 載入中動畫 */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            color: var(--theme-color);
+            z-index: 20;
+            text-shadow: 0 0 10px var(--theme-color);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid-bg"></div>
+    <div class="scanline"></div>
+
+    <div class="hud-corner top-left"></div>
+    <div class="hud-corner top-right"></div>
+    <div class="hud-corner bottom-left"></div>
+    <div class="hud-corner bottom-right"></div>
+
+    <div class="ui-text ui-top-left">
+        OP: TREADSTONE<br>
+        SAT-LINK: SECURE<br>
+        DATA: SIPRI / FAS ESTIMATES
+    </div>
+    <div class="ui-text ui-bottom-left">
+        WARNING: RESTRICTED ACCESS (LEVEL 5)<br>
+        UNAUTHORIZED DUPLICATION IS PROHIBITED
+    </div>
+
+    <div id="loading">CONNECTING TO IMF SATELLITE... DECRYPTING DATA...</div>
+    <div id="map-container"></div>
+
+    <script>
+        // 核心資料庫 (2020-2025 估計值，單位：枚)
+        // 來源參考：SIPRI (斯德哥爾摩國際和平研究所) 與 FAS
+        const nukeData = {
+            '2020': [
+                {name: '俄羅斯', value: 6375}, {name: '美國', value: 5800}, {name: '中國', value: 320},
+                {name: '法國', value: 290}, {name: '英國', value: 215}, {name: '巴基斯坦', value: 160},
+                {name: '印度', value: 150}, {name: '以色列', value: 90}, {name: '北韓', value: 35}
+            ],
+            '2021': [
+                {name: '俄羅斯', value: 6255}, {name: '美國', value: 5550}, {name: '中國', value: 350},
+                {name: '法國', value: 290}, {name: '英國', value: 225}, {name: '巴基斯坦', value: 165},
+                {name: '印度', value: 156}, {name: '以色列', value: 90}, {name: '北韓', value: 45}
+            ],
+            '2022': [
+                {name: '俄羅斯', value: 5977}, {name: '美國', value: 5428}, {name: '中國', value: 350},
+                {name: '法國', value: 290}, {name: '英國', value: 225}, {name: '巴基斯坦', value: 165},
+                {name: '印度', value: 160}, {name: '以色列', value: 90}, {name: '北韓', value: 45}
+            ],
+            '2023': [
+                {name: '俄羅斯', value: 5889}, {name: '美國', value: 5244}, {name: '中國', value: 410},
+                {name: '法國', value: 290}, {name: '英國', value: 225}, {name: '巴基斯坦', value: 170},
+                {name: '印度', value: 164}, {name: '以色列', value: 90}, {name: '北韓', value: 30}
+            ],
+            '2024': [
+                {name: '俄羅斯', value: 5580}, {name: '美國', value: 5044}, {name: '中國', value: 500},
+                {name: '法國', value: 290}, {name: '英國', value: 225}, {name: '巴基斯坦', value: 170},
+                {name: '印度', value: 172}, {name: '以色列', value: 90}, {name: '北韓', value: 50}
+            ],
+            '2025': [
+                {name: '俄羅斯', value: 5580}, {name: '美國', value: 5044}, {name: '中國', value: 500},
+                {name: '法國', value: 290}, {name: '英國', value: 225}, {name: '巴基斯坦', value: 170},
+                {name: '印度', value: 172}, {name: '以色列', value: 90}, {name: '北韓', value: 50}
+            ]
+        };
+
+        // GeoJSON 英文國名轉繁體中文對照表
+        const nameMap = {
+            'Russia': '俄羅斯',
+            'United States of America': '美國',
+            'United States': '美國',
+            'USA': '美國',
+            'China': '中國',
+            'France': '法國',
+            'United Kingdom': '英國',
+            'England': '英國',
+            'Pakistan': '巴基斯坦',
+            'India': '印度',
+            'Israel': '以色列',
+            'North Korea': '北韓',
+            'Dem. Rep. Korea': '北韓',
+            'Republic of Korea': '南韓',
+            'Japan': '日本',
+            'Taiwan': '台灣'
+        };
+
+        // 取得 GeoJSON 世界地圖資料
+        fetch('https://cdn.jsdelivr.net/gh/holtzy/D3-graph-gallery@master/DATA/world.geojson')
+            .then(response => response.json())
+            .then(worldJson => {
+                document.getElementById('loading').style.display = 'none'; // 隱藏載入文字
+                
+                // 註冊地圖資料
+                echarts.registerMap('world', worldJson);
+                
+                const chartDom = document.getElementById('map-container');
+                const myChart = echarts.init(chartDom);
+
+                // ECharts 設定參數
+                const option = {
+                    baseOption: {
+                        backgroundColor: 'transparent',
+                        
+                        // 標題設計 (科技電影風)
+                        title: {
+                            text: 'GLOBAL NUCLEAR WARHEAD INVENTORY',
+                            subtext: 'LIVE GEO-TRACKING // 2020 - 2025',
+                            left: 'center',
+                            top: 40,
+                            textStyle: {
+                                color: '#d48e42',
+                                fontFamily: 'Orbitron',
+                                fontSize: 28,
+                                textShadowBlur: 15,
+                                textShadowColor: 'rgba(212, 142, 66, 0.8)',
+                                letterSpacing: 2
+                            },
+                            subtextStyle: {
+                                color: '#a36d33',
+                                fontFamily: 'Orbitron',
+                                fontSize: 14,
+                                letterSpacing: 4
+                            }
+                        },
+
+                        // 滑鼠 Hover 提示框
+                        tooltip: {
+                            trigger: 'item',
+                            backgroundColor: 'rgba(10, 10, 10, 0.85)',
+                            borderColor: '#d48e42',
+                            borderWidth: 1,
+                            padding: 15,
+                            textStyle: { color: '#e0e0e0', fontFamily: 'Noto Sans TC' },
+                            formatter: function (params) {
+                                // 判斷是否為有資料的國家
+                                const value = params.value || 0;
+                                const countryName = params.name || '未知區域';
+                                let status = value > 0 ? `<span style="color:#ff4444;font-family:'Orbitron'">ACTIVE THREAT</span>` : `<span style="color:#55cc55;font-family:'Orbitron'">CLEAR</span>`;
+                                
+                                return `
+                                    <div style="border-bottom: 1px solid #555; padding-bottom: 5px; margin-bottom: 5px;">
+                                        <b style="font-size: 16px; color: #d48e42;">${countryName}</b>
+                                    </div>
+                                    核彈數量：<strong style="font-family:'Orbitron'; font-size: 18px; color: #fff;">${value}</strong> 枚<br>
+                                    系統評估：${status}
+                                `;
+                            }
+                        },
+
+                        // 圖例：自訂區間 (棕色系，越多越深)
+                        visualMap: {
+                            type: 'piecewise',
+                            left: 'right',
+                            bottom: '10%',
+                            right: '3%',
+                            itemWidth: 15,
+                            itemHeight: 15,
+                            textStyle: { color: '#d48e42', fontFamily: 'Orbitron' },
+                            title: ['數量級距 (WARHEADS)'],
+                            pieces: [
+                                {min: 5000, label: '5000+ 枚 (超級核武國)', color: '#2b1100'}, // 最深黑棕色
+                                {min: 1000, max: 4999, label: '1000 - 4999 枚', color: '#5c2300'},
+                                {min: 200, max: 999, label: '200 - 999 枚', color: '#8f3b00'},
+                                {min: 50, max: 199, label: '50 - 199 枚', color: '#b85a14'},
+                                {min: 1, max: 49, label: '1 - 49 枚', color: '#db8846'}     // 淺琥珀/棕橘色
+                            ],
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            padding: 15,
+                            borderColor: '#4a3018',
+                            borderWidth: 1
+                        },
+
+                        // 時間軸設定 (可拖曳、自動播放)
+                        timeline: {
+                            axisType: 'category',
+                            autoPlay: true,
+                            playInterval: 2500,
+                            data: ['2020', '2021', '2022', '2023', '2024', '2025'],
+                            bottom: '3%',
+                            left: '5%',
+                            right: '5%',
+                            label: {
+                                color: '#d48e42',
+                                fontFamily: 'Orbitron',
+                                fontSize: 14
+                            },
+                            lineStyle: { color: '#5c3a17' },
+                            checkpointStyle: {
+                                color: '#ff3333',
+                                borderColor: '#fff',
+                                borderWidth: 2,
+                                shadowBlur: 10,
+                                shadowColor: '#ff3333'
+                            },
+                            controlStyle: {
+                                color: '#d48e42',
+                                borderColor: '#d48e42'
+                            },
+                            progress: {
+                                lineStyle: { color: '#d48e42' }
+                            }
+                        },
+
+                        // 地圖本體設定
+                        geo: {
+                            map: 'world',
+                            roam: true, // 允許縮放與拖曳
+                            zoom: 1.2,
+                            nameMap: nameMap, // 映射為繁體中文
+                            itemStyle: {
+                                // 無核武國家的底色 (極深的灰棕色，突顯科技感)
+                                areaColor: '#14110e',
+                                borderColor: '#332418',
+                                borderWidth: 1
+                            },
+                            emphasis: {
+                                itemStyle: {
+                                    areaColor: '#e69945', // 游標滑過時發亮
+                                    shadowBlur: 10,
+                                    shadowColor: '#d48e42'
+                                },
+                                label: { show: false }
+                            }
+                        },
+
+                        series: [
+                            {
+                                name: 'Nuclear Warheads',
+                                type: 'map',
+                                geoIndex: 0,
+                                data: []
+                            }
+                        ]
+                    },
+                    
+                    // 根據時間軸切換的資料
+                    options: [
+                        { series: [{ data: nukeData['2020'] }], title: { subtext: 'YEAR: 2020 // DATA: VERIFIED' } },
+                        { series: [{ data: nukeData['2021'] }], title: { subtext: 'YEAR: 2021 // DATA: VERIFIED' } },
+                        { series: [{ data: nukeData['2022'] }], title: { subtext: 'YEAR: 2022 // DATA: VERIFIED' } },
+                        { series: [{ data: nukeData['2023'] }], title: { subtext: 'YEAR: 2023 // DATA: VERIFIED' } },
+                        { series: [{ data: nukeData['2024'] }], title: { subtext: 'YEAR: 2024 // DATA: ESTIMATE' } },
+                        { series: [{ data: nukeData['2025'] }], title: { subtext: 'YEAR: 2025 // DATA: PROJECTION' } }
+                    ]
+                };
+
+                myChart.setOption(option);
+
+                // RWD 響應式調整
+                window.addEventListener('resize', function() {
+                    myChart.resize();
+                });
+            })
+            .catch(error => {
+                document.getElementById('loading').innerHTML = "ERROR: SATELLITE CONNECTION FAILED.";
+                document.getElementById('loading').style.color = "red";
+                console.error('Map loading error:', error);
+            });
+    </script>
+</body>
+</html>
